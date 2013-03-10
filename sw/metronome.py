@@ -5,7 +5,7 @@ class Metronome(threading.Thread):
     tpb_floor_affinity = None;
     tpb_floor_choices = None;
     timestep = None;
-    phaselock = True;
+    do_phaselock = True;
     tempo = None;
     tick_counter = 0;
     beat_counter = [0, 0];
@@ -15,9 +15,9 @@ class Metronome(threading.Thread):
     running = False;
 
 
-    def __init__(self, tempo, beatfn=None, phaselock=True, timestep=.01):
+    def __init__(self, tempo, beatfn=None, do_phaselock=True, timestep=.01):
         threading.Thread.__init__(self);
-        self.phaselock = phaselock;
+        self.do_phaselock = do_phaselock;
         self.timestep = timestep;
         self.beatfn = beatfn;
 
@@ -75,7 +75,7 @@ class Metronome(threading.Thread):
         print "==="
 
 
-    def get_ticks_per_beat(self):
+    def get_ticks_per_beat(self, update_choices=True):
         if not self.tpb or not self.tpb_floor_affinity or not self.tpb_floor_choices:
             self.calc_ticks_per_beat();
 
@@ -84,13 +84,15 @@ class Metronome(threading.Thread):
 
         if fcratio <= self.tpb_floor_affinity:
             # choose floor
-            self.tpb_floor_choices[0] += 1;
-            self.tpb_floor_choices[1] += 1;
+            if update_choices:
+                self.tpb_floor_choices[0] += 1;
+                self.tpb_floor_choices[1] += 1;
             return self.tpb[0];
         
         else:
             # choose ceiling
-            self.tpb_floor_choices[1] += 1;
+            if update_choices:
+                self.tpb_floor_choices[1] += 1;
             return self.tpb[1];
 
 
@@ -117,7 +119,7 @@ class Metronome(threading.Thread):
                 time.sleep(self.timestep);
 
 
-    def inject_beat(self, probability):
+    def receive_beat(self, probability):
         # add to received beat counter
         self.beat_counter[1] += 1;
 
@@ -125,12 +127,21 @@ class Metronome(threading.Thread):
         i = float(self.beat_counter[1] - self.beat_counter[0]);
         f = self.tick_counter / self.tpb[1];
 
+        if self.tick_counter >= self.tpb[1]/2:
+            f -= 1.0;
+            i -= 1;
+
         # adjust phase to be closer to received beat based on probability that
         # the received beat was in fact a beat
-        if self.phaselock:
-            #self.tick_counter = 0*probability + self.tick_counter*(1-probability);
-            self.tick_counter *= (1 - probability);
-            self.beat_counter[0] = self.beat_counter[1];
+        if self.do_phaselock:
+            if self.tick_counter >= self.tpb[1]/2:
+                # move backward
+                self.tick_counter = (1-probability)*self.tick_counter + \
+                                    ( probability )*self.get_ticks_per_beat(False);
+            else:
+                # move forward
+                #self.tick_counter = 0*probability + self.tick_counter*(1-probability);
+                self.tick_counter *= (1 - probability);
 
         return i + f;
 
