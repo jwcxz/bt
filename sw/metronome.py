@@ -69,16 +69,13 @@ class Metronome(threading.Thread):
         # reset actual floor-to-ceiling ratio 
         self.tpb_floor_choices = [0, 1];
 
-        print "---"
-        print self.tpb
-        print self.tpb_floor_affinity;
-        print "==="
-
 
     def get_ticks_per_beat(self, update_choices=True):
-        if not self.tpb or not self.tpb_floor_affinity or not self.tpb_floor_choices:
+        if not self.tpb:
             self.calc_ticks_per_beat();
 
+        # TODO: just keep track of existing ratio and count... whatever, just
+        # an optimization
         fcratio = float(self.tpb_floor_choices[0]) / \
                   float(self.tpb_floor_choices[1]);
 
@@ -124,7 +121,7 @@ class Metronome(threading.Thread):
         self.beat_counter[1] += 1;
 
         # calculate beat offset
-        i = float(self.beat_counter[1] - self.beat_counter[0]);
+        i = float(self.beat_counter[0] - self.beat_counter[1])/float(self.beat_counter[1]);
         f = self.tick_counter / self.tpb[1];
 
         if self.tick_counter >= self.tpb[1]/2:
@@ -149,6 +146,8 @@ class Metronome(threading.Thread):
     def get_beat_count(self):
         return self.beat_counter;
 
+    def get_tempo(self):
+        return self.tempo;
 
     def stop(self):
         self.m_stop();

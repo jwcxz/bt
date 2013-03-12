@@ -2,23 +2,35 @@
 
 import sys
 
-import metronome
+import metronome, bank
 
 if __name__ == "__main__":
-    m_tracker = metronome.Metronome(int(sys.argv[1]));
+    target_tempo = float(sys.argv[1]);
+
+    #mbank = bank.MetronomeBank(13, narrow_field=False);
+    mbank = bank.MetronomeBank(26, narrow_field=True);
+
 
     def beat_inject(beatcount):
-        print m_tracker.get_beat_count(), m_tracker.receive_beat(1.0);
+        print "-------"
+        mbank.inject_beat(1.0);
+        perrs = mbank.get_phase_errors();
+        min_p = None;
+        for p in perrs:
+            if min_p == None or abs(p[1]) < min_p[1]:
+                min_p = (p[0], abs(p[1]));
+            print " %3.3f: %f" %(p[0], p[1]);
 
-    m_injector = metronome.Metronome(int(sys.argv[2]), beat_inject);
+        print "BEST ESTIMATE: %3.5f [%f]" %(min_p[0], min_p[1]);
 
-    m_tracker.start();
-    print "started tracker";
 
+    m_injector = metronome.Metronome(target_tempo, beat_inject);
+
+    mbank.start_metronomes();
     m_injector.start();
-    print "started injector";
 
     raw_input();
 
-    m_tracker.stop();
+    mbank.stop_metronomes();
+
     m_injector.stop();
