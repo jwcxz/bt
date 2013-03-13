@@ -121,7 +121,8 @@ class Metronome(threading.Thread):
         self.beat_counter[1] += 1;
 
         # calculate beat offset
-        i = float(self.beat_counter[0] - self.beat_counter[1])/float(self.beat_counter[1]);
+        #i = float(self.beat_counter[0] - self.beat_counter[1])/float(self.beat_counter[1]);
+        i = float(self.beat_counter[0] - self.beat_counter[1]);
         f = self.tick_counter / self.tpb[1];
 
         if self.tick_counter >= self.tpb[1]/2:
