@@ -5,7 +5,6 @@ class Metronome(threading.Thread):
     tpb_floor_affinity = None;
     tpb_floor_choices = None;
     timestep = None;
-    do_phaselock = True;
     tempo = None;
     tick_counter = 0;
     beat_counter = [0, 0];
@@ -13,16 +12,25 @@ class Metronome(threading.Thread):
 
     enabled = False;
     running = False;
+    synced = False;
+
+    cfg = {
+            'do_phaselock': True,
+            'sync_wait':    True
+            };
 
 
-    def __init__(self, tempo, beatfn=None, do_phaselock=True, timestep=.01):
+
+    def __init__(self, tempo, beatfn=None, timestep=.01, *args, **kwargs):
         threading.Thread.__init__(self);
-        self.do_phaselock = do_phaselock;
         self.timestep = timestep;
         self.beatfn = beatfn;
 
         self.m_stop();
         self.set_tempo(tempo);
+
+        for key in kwargs:
+            self.cfg[key] = kwargs[key];
 
 
     def set_tempo(self, tempo):
@@ -47,7 +55,8 @@ class Metronome(threading.Thread):
 
     def m_stop(self):
         self.running = False;
-    
+        self.synced = False;
+   
 
     def m_restart(self):
         self.m_stop();
@@ -103,6 +112,9 @@ class Metronome(threading.Thread):
                 time.sleep(0);
 
             while self.running:
+                if self.cfg['sync_wait']:
+                    while not self.synced: time.sleep(0);
+                    
                 if self.tick_counter >= self.get_ticks_per_beat():
                     self.beat_counter[0] += 1;
 
@@ -131,7 +143,7 @@ class Metronome(threading.Thread):
 
         # adjust phase to be closer to received beat based on probability that
         # the received beat was in fact a beat
-        if self.do_phaselock:
+        if self.cfg['do_phaselock']:
             if self.tick_counter >= self.tpb[1]/2:
                 # move backward
                 self.tick_counter = (1-probability)*self.tick_counter + \
@@ -141,6 +153,7 @@ class Metronome(threading.Thread):
                 #self.tick_counter = 0*probability + self.tick_counter*(1-probability);
                 self.tick_counter *= (1 - probability);
 
+        self.synced = True;
         return i + f;
 
 

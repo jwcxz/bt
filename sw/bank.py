@@ -80,10 +80,19 @@ class MetronomeBank:
         
         # find crossover point
         cur_center = None;
+        for i in xrange(len(self.metronomes)):
+            if cur_center == None or abs(self.phase_errors[i]) < cur_center[0]:
+                cur_center = (abs(self.phase_errors[i]),
+                              self.metronomes[i].get_tempo());
+
+        cur_center = cur_center[1];
+        """
         for i in xrange(1, len(self.metronomes)):
             if self.phase_errors[i] >= 0 and self.phase_errors[i-1] < 0:
                 cur_center = self.metronomes[i].get_tempo();
                 break;
+        """
+
 
         if cur_center == None:
             # no crossover found... TODO: try higher frequencies or something,

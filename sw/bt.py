@@ -24,7 +24,8 @@ if __name__ == "__main__":
         print "BEST ESTIMATE: %3.5f [%f]" %(min_p[0], min_p[1]);
 
 
-    m_injector = metronome.Metronome(target_tempo, beat_inject);
+    m_injector = metronome.Metronome(target_tempo, beat_inject,
+            sync_wait=False, do_phaselock=False);
 
     mbank.start_metronomes();
     m_injector.start();
