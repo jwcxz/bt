@@ -21,7 +21,7 @@ if __name__ == "__main__":
                 min_p = (p[0], abs(p[1]));
             print " %3.3f: %f" %(p[0], p[1]);
 
-        print "BEST ESTIMATE: %3.5f [%f]" %(min_p[0], min_p[1]);
+        print "BEST ESTIMATE: %3.5f [%f] => %d BPM" %(min_p[0], min_p[1], round(min_p[0]));
 
 
     m_injector = metronome.Metronome(target_tempo, beat_inject,
