@@ -97,7 +97,7 @@ class Metronome(threading.Thread):
 
         # adjust phase to be closer to received beat based on probability that
         # the received beat was in fact a beat
-        if self.do_phaselock:
+        if self.cfg['do_phaselock']:
             self.ticker = (    probability ) * self.rx_beat_counter + \
                           (1 - probability ) * self.ticker;
 
