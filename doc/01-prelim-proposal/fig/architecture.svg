@@ -24,13 +24,13 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.0397703"
-     inkscape:cx="410.00762"
-     inkscape:cy="646.47604"
+     inkscape:zoom="0.51988515"
+     inkscape:cx="463.55387"
+     inkscape:cy="323.04115"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1366"
+     inkscape:window-width="683"
      inkscape:window-height="754"
      inkscape:window-x="0"
      inkscape:window-y="14"
@@ -44,6 +44,30 @@
      inkscape:snap-object-midpoints="true" />
   <defs
      id="defs4">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect21351"
+       is_visible="true" />
+    <inkscape:path-effect
+       is_visible="true"
+       id="path-effect21347"
+       effect="spiro" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect21343"
+       is_visible="true" />
+    <inkscape:path-effect
+       is_visible="true"
+       id="path-effect21339"
+       effect="spiro" />
+    <inkscape:path-effect
+       is_visible="true"
+       id="path-effect21232"
+       effect="spiro" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect20264"
+       is_visible="true" />
     <marker
        inkscape:stockid="Arrow1Mend"
        orient="auto"

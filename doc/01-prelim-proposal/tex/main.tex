@@ -115,7 +115,22 @@ timing requirements.
     get a response a short time later).  Both of these will provide an
     identical output interface to the beat tracker algorithm.
     Figure~\ref{fig:implementation} illustrates the overall hardware
-    implementation plan.
+    implementation plan.  The ADC interface and serial interface are part of
+    the hardware test harness.  In hardware, one of the two is sent to the
+    sample injector, which sends data to \projname.  In simulation, the sample
+    injector will read from an input data file, but will present data exactly
+    in the same way it does to the \projname module.  The tempo and beat output
+    of \projname go to the tempo processor interface, which controls the serial
+    controller and blinky LED controller (which makes the onboard LEDs blink to
+    the stream).  In simulation, the tempo controller will report to
+    \ttt{stdout} the tempo estimate.
+
+    \begin{figure}
+        \centering
+        \includegraphics{fig/implementation.pdf}
+        \caption{planned hardware architecture}
+        \label{fig:implementation}
+    \end{figure}
 
     I should be able to reuse a major portion of the audio pipeline's test
     harnesses, especially for developing the simulation environment.
