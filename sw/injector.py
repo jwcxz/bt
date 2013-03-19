@@ -16,9 +16,16 @@ class SampleInjector(threading.Thread):
         self.injfn = injfn;
 
         self.afile = wave.open(afname, 'r');
-        self.timestep = 1/(self.afile.framerate());
+        self.timestep = 1/(float(self.afile.getframerate()));
 
         self.unpacker = "<%s" % ("H"*self.afile.getnchannels());
+
+
+    def get_framerate(self):
+        if self.afile:
+            return self.afile.getframerate();
+        else:
+            return 0;
 
 
     def run(self):
@@ -36,7 +43,8 @@ class SampleInjector(threading.Thread):
                     self.enabled = False;
                     break;
 
-            sample = struct.unpack(self.unpacker, framedata);
+            sample = [self.__twoscomp(s) for s in struct.unpack(self.unpacker, framedata)];
+
             self.injfn(sample);
 
             time.sleep(self.timestep);
@@ -47,4 +55,14 @@ class SampleInjector(threading.Thread):
 
 
     def destroy(self):
-        self.afile.close();
+        if self.afile:
+            self.afile.close();
+
+
+    def __twoscomp(self, sample):
+        if (sample >> 15) == 1:
+            # negative
+            return -( (sample ^ 0xFFFF) + 1);
+        else:
+            # positive
+            return sample;
