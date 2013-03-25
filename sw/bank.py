@@ -7,7 +7,7 @@ class MetronomeBank:
     generation = None;
 
     cfg = {
-        'decay_phserr': .90,
+        'decay_phserr': .50,
         'gen_turnover': 10,
         'min_tempo_increment': .1,
         'range_squash_factor': 2,

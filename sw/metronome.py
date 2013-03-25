@@ -1,12 +1,14 @@
 import math, threading, time
 
 class Metronome(threading.Thread):
-    timestep = None;
     tempo = None;
+    beatfn = None;
+    timestep = None;
+    subdivide = None;
+
     tick_increment = None;
     ticker = 0;
     rx_beat_counter = 0;
-    beatfn = None;
 
     enabled = False;
     running = False;
@@ -19,10 +21,11 @@ class Metronome(threading.Thread):
 
 
 
-    def __init__(self, tempo, beatfn=None, timestep=.01, *args, **kwargs):
+    def __init__(self, tempo, beatfn=None, timestep=.01, subdivide=32, *args, **kwargs):
         threading.Thread.__init__(self);
-        self.timestep = timestep;
         self.beatfn = beatfn;
+        self.timestep = timestep;
+        self.subdivide = subdivide;
 
         self.m_stop();
         self.set_tempo(tempo);
@@ -46,6 +49,7 @@ class Metronome(threading.Thread):
     def m_start(self):
         self.enabled = True;
         if not self.running:
+            self.synced = False;
             self.ticker = 0;
             self.rx_beat_counter = 0;
             self.running = True;
@@ -53,7 +57,7 @@ class Metronome(threading.Thread):
 
     def m_stop(self):
         self.running = False;
-        self.synced = False;
+        self.synced = True;
    
 
     def m_restart(self):
@@ -100,6 +104,8 @@ class Metronome(threading.Thread):
         if self.cfg['do_phaselock']:
             self.ticker = (    probability ) * self.rx_beat_counter + \
                           (1 - probability ) * self.ticker;
+
+        self.synced = True;
 
         return beat_offset;
 
