@@ -1,0 +1,66 @@
+Cmp-Mod V01 Created by CvPcb (2012-03-17 BZR 3466)-stable date = Sun 31 Mar 2013 04:38:24 PM EDT
+
+BeginCmp
+TimeStamp = /51479270;
+Reference = C1;
+ValeurCmp = 1u;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /51479570;
+Reference = C2;
+ValeurCmp = 1u;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /5147957D;
+Reference = C3;
+ValeurCmp = 1u;
+IdModule  = C2;
+EndCmp
+
+BeginCmp
+TimeStamp = /51477F48;
+Reference = P1;
+ValeurCmp = AUDIO;
+IdModule  = AUDIO;
+EndCmp
+
+BeginCmp
+TimeStamp = /51477027;
+Reference = P2;
+ValeurCmp = ADC;
+IdModule  = SIL-6;
+EndCmp
+
+BeginCmp
+TimeStamp = /5147934E;
+Reference = R1;
+ValeurCmp = 100K;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /514793DC;
+Reference = R2;
+ValeurCmp = 100K;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /5147914F;
+Reference = R3;
+ValeurCmp = 47K;
+IdModule  = R3;
+EndCmp
+
+BeginCmp
+TimeStamp = /51479168;
+Reference = R4;
+ValeurCmp = 47K;
+IdModule  = R3;
+EndCmp
+
+EndListe

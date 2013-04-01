@@ -1,13 +1,11 @@
-update=Mon 18 Mar 2013 04:54:20 PM EDT
+update=Sun 31 Mar 2013 05:19:39 PM EDT
 version=1
-last_client=pcbnew
+last_client=kicad
 [cvpcb]
 version=1
 NetIExt=net
 [cvpcb/libraries]
 EquName1=devcms
-[general]
-version=1
 [eeschema]
 version=1
 LibDir=../libs
@@ -81,3 +79,5 @@ LibName9=dip_sockets
 LibName10=pga_sockets
 LibName11=valves
 LibName12=jack_stereo
+[general]
+version=1
