@@ -3,3 +3,5 @@
 doc/*/out
 
 tests/
+
+ref/s3demo
