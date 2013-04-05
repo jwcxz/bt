@@ -1,0 +1,13 @@
+vhdl work "hdl/cs/chipscope_icon.vhd"
+vhdl work "hdl/cs/chipscope_ila.vhd"
+
+vhdl work "hdl/ext/clocking.vhd"
+vhdl work "hdl/ext/digilent-uart.vhd"
+
+vhdl work "hdl/amp_adc.vhd"
+
+vhdl work "hdl/pkg/data_sizes.vhd"
+
+vhdl work "hdl/sample_injector.vhd"
+
+vhdl work "hdl/top.vhd"

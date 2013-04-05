@@ -1,0 +1,6 @@
+setmode -bscan
+setcable -p auto
+addDevice -p 1 -file xil/bitgen/project.bit
+addDevice -p 2 -file build/xcf04s.bsd
+program -p 1 -onlyFpga
+quit

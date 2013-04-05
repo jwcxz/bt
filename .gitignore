@@ -7,3 +7,4 @@ tests/
 ref/s3demo
 
 fpga/xil
+fpga/build/license.sh
