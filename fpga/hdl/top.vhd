@@ -99,17 +99,21 @@ begin
 
     -- yay we're configured
     fpga_init_b <= '0';
-    --led <= x"A5";
-    --led <= uart_dout;
-    led <= sample(sample'high downto sample'high-7);
---    process (clk50)
---    begin
---        if (rising_edge(clk50)) then
---            if (sample_rdy = '1') then
---                led <= sample(sample'high downto sample'high-7);
---            end if;
---        end if;
---    end process;
+
+
+    -- led control
+    process (clk50)
+    begin
+        if (rising_edge(clk50)) then
+            if (sample_rdy = '1') then
+                if sample(sample'high) = '1' then
+                    led <= not sample(sample'high-1 downto sample'high-8);
+                else
+                    led <= sample(sample'high-1 downto sample'high-8);
+                end if;
+            end if;
+        end if;
+    end process;
 
 
     -- uart receiver and transmitter
