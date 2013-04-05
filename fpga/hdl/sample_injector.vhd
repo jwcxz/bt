@@ -114,8 +114,8 @@ begin
 
                 if state = ST_CONVDONE then
                     sample_rdy <= '1';
-                    --sample <= std_logic_vector(adc_sum(adc_sum'high downto 1));
-                    sample <= adc_a;
+                    sample <= std_logic_vector(adc_sum(adc_sum'high downto
+                                                adc_sum'high-sample'high));
                 else
                     sample_rdy <= '0';
                 end if;
