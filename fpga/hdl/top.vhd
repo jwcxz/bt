@@ -62,16 +62,9 @@ architecture project_arch of project is
     signal sample_rdy, sample_rd : std_logic;
     signal sample : std_logic_vector(SAMPLE_WIDTH-1 downto 0);
 
-    signal dbg_aa_state : std_logic_vector(3 downto 0);
-    signal dbg_aa_scount : std_logic_vector(7 downto 0);
-    signal dbg_si_state : std_logic_vector(3 downto 0);
-    signal dbg_si_start : std_logic;
-
     signal cs_control : std_logic_vector(35 downto 0);
     signal cs_data : std_logic_vector(127 downto 0);
     signal cs_trig : std_logic_vector(7 downto 0);
-
-    signal ad_conv_s, amp_cs_s, spi_sck_s, spi_mosi_s : std_logic;
 
 begin
     -- set up clocking and reset
@@ -146,9 +139,6 @@ begin
     amp_shdn <= '0';
     amp_adc_inst : entity amp_adc
         port map (
-            dbg_state => dbg_aa_state,
-            dbg_scount => dbg_aa_scount,
-
             clk => clk50,
             rst => rst,
 
@@ -178,9 +168,6 @@ begin
     -- sample injector
     sample_injector_inst : entity sample_injector
         port map (
-            dbg_state => dbg_si_state,
-            dbg_start => dbg_si_start,
-
             clk => clk50,
             rst => rst,
 
@@ -226,45 +213,32 @@ begin
         end if;
     end process;
 
-    chipscope_icon_inst : entity chipscope_icon
-        port map (
-            CONTROL0 => cs_control
-        );
-
-    chipscope_ila_inst : entity chipscope_ila
-        port map (
-            CONTROL => cs_control,
-            CLK => clk50,
-            DATA => cs_data,
-            TRIG0 => cs_trig
-        );
-
-    reg_ila : process(clk50)
-    begin
-        if (rising_edge(clk50)) then
-            if (rst='1') then
-                cs_trig <= (others => '0');
-                cs_data <= (others => '0');
-
-            else 
-                cs_trig <= (7 downto 3 => '0') & adc_start & amp_cfg & dbg_si_start;
-                cs_data <= (127 downto 26 => '0') & 
-                           amp_out &        -- 25
-                           adc_out &        -- 24
-                           dbg_aa_scount &  -- 23:16
-                           adc_start &      -- 15
-                           amp_cfg &        -- 14
-                           spi_sck_s &      -- 13
-                           spi_mosi_s &     -- 12
-                           spi_miso &       -- 11
-                           ad_conv_s &      -- 10
-                           amp_cs_s &       -- 9
-                           dbg_si_start &   -- 8
-                           dbg_si_state &   -- 7:4
-                           dbg_aa_state;    -- 3:0
-            end if;
-        end if;
-    end process;
+--    chipscope_icon_inst : entity chipscope_icon
+--        port map (
+--            CONTROL0 => cs_control
+--        );
+--
+--    chipscope_ila_inst : entity chipscope_ila
+--        port map (
+--            CONTROL => cs_control,
+--            CLK => clk50,
+--            DATA => cs_data,
+--            TRIG0 => cs_trig
+--        );
+--
+--    reg_ila : process(clk50)
+--    begin
+--        if (rising_edge(clk50)) then
+--            if (rst='1') then
+--                cs_trig <= (others => '0');
+--                cs_data <= (others => '0');
+--
+--            else 
+--                cs_trig <= (7 downto 0 => '0');
+--                cs_data <= (127 downto 0 => '0');
+--            end if;
+--        end if;
+--    end process;
 
 
 end architecture;
