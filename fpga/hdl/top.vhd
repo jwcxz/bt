@@ -67,6 +67,7 @@ architecture project_arch of project is
     signal cs_trig : std_logic_vector(7 downto 0);
 
 begin
+
     -- set up clocking and reset
     clocking_inst : entity clocking
         port map (
@@ -239,6 +240,5 @@ begin
 --            end if;
 --        end if;
 --    end process;
-
 
 end architecture;
