@@ -50,7 +50,8 @@ end project;
 architecture project_arch of project is
 
     signal clk25, clk50    : std_logic;
-    signal rst, clk_locked : std_logic;
+    signal rst, clk_locked, clk_rst : std_logic;
+    signal rst_dcount : unsigned(5 downto 0);
 
     signal uart_din, uart_dout : std_logic_vector(7 downto 0);
     signal uart_wr, uart_rd, uart_rda, uart_tbe : std_logic;
@@ -78,7 +79,26 @@ begin
             lock    => clk_locked
         );
 
-    rst <= btn_south or (not clk_locked);
+    -- hold clocking reset for a few clock cycles to let things settle
+    rst_hold : process(clk50)
+    begin
+        if (rising_edge(clk50)) then
+            if (clk_locked = '0') then
+                clk_rst <= '1';
+                rst_dcount <= (others => '0');
+            else
+                if (rst_dcount = to_unsigned(2**(rst_dcount'length) - 1,
+                                    rst_dcount'length)) then
+                    clk_rst <= '0';
+                    rst_dcount <= (others => '0');
+                else
+                    rst_dcount <= rst_dcount + 1;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    rst <= btn_south or clk_rst;
 
 
     -- disable other devices on the spi line
@@ -152,18 +172,13 @@ begin
             adc_a      => adc_a,
             adc_b      => adc_b,
 
-            amp_cs    => amp_cs_s,
-            adc_start => ad_conv_s,
-            spi_sck   => spi_sck_s,
-            spi_mosi  => spi_mosi_s,
+            amp_cs    => amp_cs,
+            adc_start => ad_conv,
+            spi_sck   => spi_sck,
+            spi_mosi  => spi_mosi,
             spi_adc   => adc_out,
             spi_amp   => amp_out
         );
-
-    ad_conv <= ad_conv_s;
-    amp_cs <= amp_cs_s;
-    spi_sck <= spi_sck_s;
-    spi_mosi <= spi_mosi_s;
 
 
     -- sample injector
