@@ -53,7 +53,7 @@ architecture project_arch of project is
     signal rst, clk_locked : std_logic;
 
     signal uart_din, uart_dout : std_logic_vector(7 downto 0);
-    signal uart_wr, uart_rd, uart_rda : std_logic;
+    signal uart_wr, uart_rd, uart_rda, uart_tbe : std_logic;
 
     signal amp_cfg, adc_start, amp_done, adc_done : std_logic;
     signal amp_gain     : std_logic_vector(7 downto 0);
@@ -138,7 +138,7 @@ begin
             oe    => open,
 
             rda => uart_rda,
-            tbe => open
+            tbe => uart_tbe
         );
 
 
@@ -215,7 +215,7 @@ begin
 
                 if (sample_rdy = '1') then
                     uart_din <= sample(sample'high downto sample'high-7);
-                    uart_wr  <= '1';
+                    uart_wr  <= uart_tbe;
                     sample_rd <= '1';
                 else
                     uart_wr <= '0';
