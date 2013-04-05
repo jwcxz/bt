@@ -1,0 +1,55 @@
+#!/usr/bin/env python2
+
+import argparse, serial, sys
+
+def tc(x):
+    if (x & 0x80):
+        return -(((~x)&0x7F)+1)
+    else:
+        return x;
+
+class DataCapture:
+    def __init__(self, port, baud, outf):
+        self.cxn = serial.Serial('/dev/ttyUSB0', 115200);
+        self.outf = outf;
+
+    def capture(self, dlen):
+        rcv = self.cxn.read(size=dlen);
+
+        out = "";
+        for c in rcv:
+            out += "%d\n" % (tc(ord(c)));
+
+        f = open(self.outf, 'w');
+        f.write(out);
+        f.close();
+
+    def close(self):
+        self.cxn.close();
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="serial data capture");
+
+    p.add_argument('outfile', nargs=1, type=str, default="capture.out",
+            help='output file');
+
+    p.add_argument('-l', '--length', dest='dlen', type=int,
+            action='store', default=32768, help='buffer size');
+
+    p.add_argument('-p', '--port', dest='port', type=str,
+            action='store', default='/dev/ttyUSB0', help='capture port');
+
+    p.add_argument('-b', '--baud', dest='baud', type=int,
+            action='store', default=115200, help='capture baud rate');
+
+    args = p.parse_args();
+
+
+    print "Capturing %d bytes..." % args.dlen;
+
+    dc = DataCapture(args.port, args.baud, args.outfile[0]);
+    dc.capture(args.dlen);
+    dc.close();
+
+    print "  done!";
