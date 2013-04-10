@@ -55,9 +55,38 @@ class BeatClassifier(threading.Thread):
     def stop(self):
         self.enabled = False;
 
+
+    local_energy = [0, 0];
+    average_energy = 0;
+    def classifier_round(self):
+        N_L = 4096;
+        F = 1.3;
+        alpha = 0.5;
+
+        sample = self.samplebuf[0];
+
+        # compute energy
+        energy = sample ** 2;
+
+        self.local_energy[0] += 1;
+        self.local_energy[1] += energy;
+
+        if self.local_energy[0] == N_L:
+            # compare against average energy and report
+            if self.local_energy[1] >= F * self.average_energy:
+                self.injfn(1.0);
+                #print "UNS! %f %f" % (self.local_energy[1], self.average_energy);
+
+            # update average energy
+            self.average_energy = alpha * self.average_energy + \
+                                  (1-alpha) * self.local_energy[1];
+
+            self.local_energy[0] = 0;
+            self.local_energy[1] = 0.;
+
     
     running_avg = 0;
-    def classifier_round(self):
+    def __old__classifier_round(self):
         # running average for baseline volume
         self.running_avg = (1 - self.cfg['avg_decay'])*self.running_avg + \
                             (self.cfg['avg_decay'])*((self.samplebuf[-1])**2);
