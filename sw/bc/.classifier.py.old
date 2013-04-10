@@ -9,10 +9,7 @@ class BeatClassifier:
             'windowsize' : .001,
             'threshhold' : .5,
             'beat_decay' : .5,
-            'none_decay' : .5,
-            'N_L' : 4096,
-            'F' : 1.3,
-            'alpha' : 0.5
+            'none_decay' : .5
         };
 
     p = {
@@ -21,8 +18,7 @@ class BeatClassifier:
             'midhi'  : None
         };
 
-    local_energy = [0, 0];
-    average_energy = 0;
+    buf = [];
 
 
     def __init__(self):
@@ -32,31 +28,58 @@ class BeatClassifier:
         for k in kwargs.keys():
             self.cfg[k] = kwargs[k];
 
+        self.calc_winlength();
+        self.calc_midrange();
+        self.clear_buf();
+
+    def calc_winlength(self):
+        self.p['winlen'] = int(self.cfg['framerate'] * self.cfg['windowsize']);
+
+    def calc_midrange(self):
+        lo = self.p['winlen'];
+        hi = lo + self.p['winlen'] - 1;
+        self.p['midlo'] = lo;
+        self.p['midhi'] = hi;
+
+    def clear_buf(self):
+        self.buf = [0]*(3*self.p['winlen']);
+
+    def update_buf(self, sample):
+        self.buf.pop(0);
+        self.buf.append(sample);
+
     def inject(self, sample):
         # take average of sample (not the best thing in the world to do in
         # general, especially when the left and right channels are 180 degrees
         # out of phase)
         sample = sum(sample)/len(sample);
 
-        # compute energy
-        energy = sample ** 2;
+        # add to buffer
+        self.update_buf(sample);
 
-        self.local_energy[0] += 1;
-        self.local_energy[1] += energy;
+        # compute sliding window averages
+        avgs = self.sw_avg();
 
-        if self.local_energy[0] == self.cfg['N_L']:
-            # compare against average energy and report
-            if self.local_energy[1] >= self.cfg['F'] * self.average_energy:# or \
-               #self.local_energy[1] <= 1/self.cfg['F'] * self.average_energy:
-                   print "UNS! %f %f" % (self.local_energy[1], self.average_energy);
+        print avgs
 
-            # update average energy
-            self.average_energy = self.cfg['alpha'] * self.average_energy + \
-                                  (1-self.cfg['alpha']) * self.local_energy[1];
+    def sw_avg(self):
+        # 0 1 2 3 4 5
+        # 2 3
+        #   2 3
+        #     2 3
+        #       2 3
+        #         2 3
 
-            self.local_energy[0] = 0;
-            self.local_energy[1] = 0.;
+        avgs = [];
+        mid = self.buf[self.p['midlo']:self.p['midhi']+1]
+        mid = np.array(mid);
 
+        for base in xrange(0, self.p['midhi'] + 2):
+            win = self.buf[base:base+self.p['winlen']];
+            win = np.array(win);
+            avgs.append( np.absolute(np.sum(mid * win)) );
+
+        return avgs;
 
 
 if __name__ == "__main__":
@@ -73,7 +96,7 @@ if __name__ == "__main__":
         injector.destroy();
 
     else:
-        bc.set_params(framerate=1, windowsize=2, N_L=2);
+        bc.set_params(framerate=1, windowsize=2);
         for i in xrange(5):
             bc.inject([i]);
         for i in xrange(5):
