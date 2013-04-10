@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 
 import injector, sys
+import numpy as np
 
 class BeatClassifier:
     cfg = {
@@ -12,8 +13,9 @@ class BeatClassifier:
         };
 
     p = {
-            'winlen'   : None,
-            'midrange' : None
+            'winlen' : None,
+            'midlo'  : None,
+            'midhi'  : None
         };
 
     buf = [];
@@ -22,7 +24,7 @@ class BeatClassifier:
     def __init__(self):
         pass;
 
-    def set_params(*args, **kwargs):
+    def set_params(self, *args, **kwargs):
         for k in kwargs.keys():
             self.cfg[k] = kwargs[k];
 
@@ -31,15 +33,16 @@ class BeatClassifier:
         self.clear_buf();
 
     def calc_winlength(self):
-        self.p['winlen'] = self.cfg['framerate'] * self.cfg['windowsize'];
+        self.p['winlen'] = int(self.cfg['framerate'] * self.cfg['windowsize']);
 
     def calc_midrange(self):
-        lo = self.p['winlen']/2;
+        lo = self.p['winlen'];
         hi = lo + self.p['winlen'] - 1;
-        self.p['midrange'] = (lo, hi);
+        self.p['midlo'] = lo;
+        self.p['midhi'] = hi;
 
     def clear_buf(self):
-        self.buf = [0]*(2*self.p['winlen']);
+        self.buf = [0]*(3*self.p['winlen']);
 
     def update_buf(self, sample):
         self.buf.pop(0);
@@ -51,22 +54,50 @@ class BeatClassifier:
         # out of phase)
         sample = sum(sample)/len(sample);
 
+        # add to buffer
+        self.update_buf(sample);
 
+        # compute sliding window averages
+        avgs = self.sw_avg();
 
+        print avgs
+
+    def sw_avg(self):
+        # 0 1 2 3 4 5
+        # 2 3
+        #   2 3
+        #     2 3
+        #       2 3
+        #         2 3
+
+        avgs = [];
+        mid = self.buf[self.p['midlo']:self.p['midhi']+1]
+        mid = np.array(mid);
+
+        for base in xrange(0, self.p['midhi'] + 2):
+            win = self.buf[base:base+self.p['winlen']];
+            win = np.array(win);
+            avgs.append( np.absolute(np.sum(mid * win)) );
+
+        return avgs;
 
 
 if __name__ == "__main__":
 
     bc = BeatClassifier();
 
-    injector = SampleInjector(sys.argv[1], bc.inject);
+    if len(sys.argv) > 1:
+        injector = injector.SampleInjector(sys.argv[1], bc.inject);
+        bc.set_params(framerate=injector.get_framerate());
+        injector.start();
+        print "Enter to stop...";
+        raw_input();
+        injector.stop();
+        injector.destroy();
 
-    bc.set_params(injector.get_framerate());
-
-    injector.start();
-
-    print "Enter to stop...";
-    raw_input()
-
-    injector.stop();
-    injector.destroy();
+    else:
+        bc.set_params(framerate=1, windowsize=2);
+        for i in xrange(5):
+            bc.inject([i]);
+        for i in xrange(5):
+            bc.inject([4-i]);
