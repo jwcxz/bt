@@ -21,7 +21,7 @@ def get_samples(fname):
     samples = [ twoscomp(s) for s in struct.unpack(unpacker, frames) ];
     samples = np.array(samples);
 
-    return (frate, samples.reshape((-1,2)));
+    return (frate, wf.getsampwidth(), samples.reshape((-1,wf.getnchannels())));
 
 
 if __name__ == "__main__":

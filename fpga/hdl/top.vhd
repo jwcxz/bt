@@ -49,8 +49,25 @@ end project;
 
 architecture project_arch of project is
 
+    constant BT_INFO_SZ : integer := 20;
+
+    component mkBeatTracker is
+        port (
+            CLK : in std_logic;
+            RST_N : in std_logic;
+
+            putSampleInput_in  : in std_logic_vector(13 downto 0);
+            EN_putSampleInput  : in std_logic;
+            RDY_putSampleInput : out std_logic;
+
+            EN_getBeatInfo  : in std_logic;
+            getBeatInfo     : out std_logic_vector(BT_INFO_SZ-1 downto 0);
+            RDY_getBeatInfo : out std_logic
+        );
+    end component mkBeatTracker;
+
     signal clk25, clk50    : std_logic;
-    signal rst, clk_locked, clk_rst : std_logic;
+    signal rst, clk_locked, clk_rst, rst_n : std_logic;
     signal rst_dcount : unsigned(5 downto 0);
 
     signal uart_din, uart_dout : std_logic_vector(7 downto 0);
@@ -66,6 +83,12 @@ architecture project_arch of project is
     signal cs_control : std_logic_vector(35 downto 0);
     signal cs_data : std_logic_vector(127 downto 0);
     signal cs_trig : std_logic_vector(7 downto 0);
+
+    signal bt_sample_in : std_logic_vector(13 downto 0);
+    signal bt_sample_en, bt_sample_rdy : std_logic;
+
+    signal bt_info : std_logic_vector(BT_INFO_SZ-1 downto 0);
+    signal bt_info_en, bt_info_rdy : std_logic;
 
 begin
 
@@ -99,6 +122,7 @@ begin
     end process;
 
     rst <= btn_south or clk_rst;
+    rst_n <= not rst;
 
 
     -- disable other devices on the spi line
@@ -202,6 +226,19 @@ begin
         );
 
     -- main processor
+    beat_tracker_inst : mkBeatTracker
+        port map (
+            CLK => clk50,
+            RST_N => rst_n,
+
+            putSampleInput_in  => bt_sample_in,
+            EN_putSampleInput  => bt_sample_en,
+            RDY_putSampleInput => bt_sample_rdy,
+
+            getBeatInfo     => bt_info,
+            EN_getBeatInfo  => bt_info_en,
+            RDY_getBeatInfo => bt_info_rdy
+        );
 
     -- tempo extractor
 
@@ -215,45 +252,59 @@ begin
                 uart_din <= (others => '0');
                 uart_wr  <= '0';
             else
-
-                if (sample_rdy = '1') then
-                    uart_din <= sample(sample'high downto sample'high-7);
+                if (bt_info_rdy = '1') then
+                    uart_din <= bt_info(bt_info'high downto bt_info'high-7);
                     uart_wr  <= uart_tbe;
-                    sample_rd <= '1';
                 else
                     uart_wr <= '0';
-                    sample_rd <= '0';
                 end if;
 
             end if;
         end if;
     end process;
 
---    chipscope_icon_inst : entity chipscope_icon
---        port map (
---            CONTROL0 => cs_control
---        );
---
---    chipscope_ila_inst : entity chipscope_ila
---        port map (
---            CONTROL => cs_control,
---            CLK => clk50,
---            DATA => cs_data,
---            TRIG0 => cs_trig
---        );
---
---    reg_ila : process(clk50)
---    begin
---        if (rising_edge(clk50)) then
---            if (rst='1') then
---                cs_trig <= (others => '0');
---                cs_data <= (others => '0');
---
---            else 
---                cs_trig <= (7 downto 0 => '0');
---                cs_data <= (127 downto 0 => '0');
---            end if;
---        end if;
---    end process;
+    bt_sample_in <= sample;
+    bt_sample_en <= sample_rdy and bt_sample_rdy;
+    sample_rd <= sample_rdy and bt_sample_rdy;
+
+    bt_info_en <= bt_info_rdy;
+
+    chipscope_icon_inst : entity chipscope_icon
+        port map (
+            CONTROL0 => cs_control
+        );
+
+    chipscope_ila_inst : entity chipscope_ila
+        port map (
+            CONTROL => cs_control,
+            CLK => clk50,
+            DATA => cs_data,
+            TRIG0 => cs_trig
+        );
+
+    reg_ila : process(clk50)
+    begin
+        if (rising_edge(clk50)) then
+            if (rst='1') then
+                cs_trig <= (others => '0');
+                cs_data <= (others => '0');
+
+            else 
+                cs_trig <= (7 downto 2 => '0') & bt_info_rdy & sample_rdy;
+                cs_data <= (127 downto 71 => '0') &
+                           uart_din & -- 70:63
+                           uart_wr & -- 62
+                           x"00" & bt_info & -- 61:34
+                           bt_info_en & -- 33
+                           bt_info_rdy & -- 32
+                           bt_sample_in & -- 31:18
+                           bt_sample_en & -- 17
+                           bt_sample_rdy & -- 16
+                           sample & -- 15:2
+                           sample_rd & -- 1
+                           sample_rdy; -- 0
+            end if;
+        end if;
+    end process;
 
 end architecture;

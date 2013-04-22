@@ -158,10 +158,10 @@ printsep IMPACT
 echo "READY TO PROGRAM"
 echo -ne "\a"
 #read NOPE
-NOPE=n
+#NOPE=n
 
 if [[ "$NOPE" != "n" ]]; then
-    impact -batch build/impactcmds \
+    impact -batch build/impact-program \
         | tee xil/reports/impact/cmd.log # || exit 1
 
     # move log

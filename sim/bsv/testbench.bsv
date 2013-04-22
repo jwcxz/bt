@@ -1,83 +1,76 @@
-
 import Counter::*;
 
-import AudioPipeline::*;
-import AudioProcessorTypes::*;
+import ClientServer::*;
+import GetPut::*;
+
+import FShow::*;
+
+import Types::*;
+import BeatTracker::*;
 
 (* synthesize *)
-module mkTestDriver (Empty);
+module mkTestbench(Empty);
+    BeatTracker bt <- mkBeatTracker();
 
-    AudioProcessor pipeline <- mkAudioPipeline();
+    Reg#(File) fr <- mkRegU();
+    Reg#(File) fw <- mkRegU();
 
-    Reg#(File) m_in <- mkRegU();
-    Reg#(File) m_out <- mkRegU();
+    Reg#(Bool) init_done <- mkReg(False);
+    Reg#(Bool) read_done <- mkReg(False);
 
-    Reg#(Bool) m_inited <- mkReg(False);
-    Reg#(Bool) m_doneread <- mkReg(False);
+    rule init(!init_done);
+        init_done <= True;
 
-    Counter#(32) m_outstanding <- mkCounter(0);
-
-    rule init(!m_inited);
-        m_inited <= True;
-
-        pipeline.setfactor(2.0);
-
-        File in <- $fopen("in.pcm", "rb");
-        if (in == InvalidFile) begin
-            $display("couldn't open in.pcm");
+        File t_in <- $fopen("in.dat", "rb");
+        if (t_in == InvalidFile) begin
+            $display("couldn't open input file");
             $finish;
         end
-        m_in <= in;
+        fr <= t_in;
 
-        File out <- $fopen("out.pcm", "wb");
-        if (out == InvalidFile) begin
-            $display("couldn't open out.pcm for write");
+        File t_out <- $fopen("out.dat", "wb");
+        if (t_out == InvalidFile) begin
+            $display("couldn't open output file");
             $finish;
         end
-        m_out <= out;
+        fw <= t_out;
     endrule
 
-    rule read(m_inited && !m_doneread && m_outstanding.value() != maxBound);
-        int a <- $fgetc(m_in);
-        int b <- $fgetc(m_in);
+    rule read(init_done && !read_done);
+        int a <- $fgetc(fr);
+        int b <- $fgetc(fr);
 
         if (a == -1 || b == -1) begin
-            m_doneread <= True;
-            $fclose(m_in);
+            read_done <= True;
+            $fclose(fr);
         end else begin
             Bit#(8) a8 = truncate(pack(a));
             Bit#(8) b8 = truncate(pack(b));
 
-            // Input is little endian. That means the first byte we read (a8)
-            // is the least significant byte in the sample.
-            pipeline.putSampleInput(unpack({b8, a8}));
-            m_outstanding.up();
+            Bit#(16) c = {a8, b8};
+            Bit#(14) d = c[13:0];
+
+            bt.putSampleInput(unpack(d));
         end
     endrule
 
-    (* descending_urgency="write, pad" *)
-    rule pad(m_inited && m_doneread);
-        // In case there aren't an FFT_POINTs multiple of input samples, pad
-        // the rest with zeros so eventually all the outstanding samples will
-        // drain.
-        pipeline.putSampleInput(0);
+    rule write(init_done);
+        TopLvlOut dout <- bt.getBeatInfo();
+
+        Bit#(8) a8 = 8'b00000000;
+        Bit#(8) b8 = {4'b0000, pack(dout)[19:16]};
+        Bit#(8) c8 = pack(dout)[15:8];
+        Bit#(8) d8 = pack(dout)[7:0];
+
+        $fwrite(fw, "%c", a8);
+        $fwrite(fw, "%c", b8);
+        $fwrite(fw, "%c", c8);
+        $fwrite(fw, "%c", d8);
     endrule
 
-    rule write(m_inited);
-        Sample d <- pipeline.getSampleOutput();
-        m_outstanding.down();
-
-        // Little endian: first thing out is least significant.
-        Bit#(8) a8 = pack(d)[7:0];
-        Bit#(8) b8 = pack(d)[15:8];
-        $fwrite(m_out, "%c", a8);
-        $fwrite(m_out, "%c", b8);
-    endrule
-
-    rule finish(m_doneread && m_outstanding.value() == 0);
-        $fclose(m_out);
+    rule finish(read_done);
+        $fclose(fw);
         $finish();
     endrule
 
 endmodule
-
