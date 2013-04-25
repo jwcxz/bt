@@ -1,0 +1,74 @@
+#!/usr/bin/env python2
+
+import argparse, re, serial, time
+
+DEF_PORT = '/dev/ttyUSB0';
+DEF_BAUD = 115200;
+
+DEF_NUM  = 60;
+DEF_BASE = 120;
+
+class BTInterface:
+    def __init__(self, port=DEF_PORT, baud=DEF_BAUD, num=DEF_NUM, base=DEF_BASE):
+
+        self.cxn = serial.Serial(port, baud);
+        self.num = num;
+        self.base = base;
+
+    def get(self):
+        out = {};
+
+        self.cxn.write('!');
+        data = self.cxn.read(self.num);
+        
+        tempo = self.base;
+        for c in data:
+            out[tempo] = ord(c);
+            tempo += 1;
+
+        return out;
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="bt analyzer interface");
+
+    p.add_argument('-p', '--port', dest='port', type=str,
+            action='store', default=DEF_PORT, help='serial port');
+
+    p.add_argument('-b', '--baud', dest='baud', type=int,
+            action='store', default=DEF_BAUD, help='baud rate');
+
+
+    p.add_argument('-B', '--base-tempo', dest='basetempo', type=int,
+            action='store', default=DEF_BASE, help='base tempo');
+
+    p.add_argument('-n', '--num-metronomes', dest='nummetronomes', type=int,
+            action='store', default=DEF_NUM,
+            help='manually set number of metronomes');
+
+    p.add_argument('-a', '--metronome-file', dest='autometronome', type=str,
+            action='store', default=None,
+            help='automatically get number of metronomes from a BSV file');
+
+    args = p.parse_args();
+
+
+    num = args.nummetronomes;
+    if args.autometronome != None:
+        srch = re.compile('.*typedef\s+(?P<num>\d+)\s+NumMetronomes;.*');
+        f = open(args.autometronome, 'r');
+
+        for line in f:
+            if srch.search(line):
+                num = int(srch.search(line).groupdict()['num']);
+                break;
+
+        f.close();
+
+    print "Grabbing data from %d metronomes..." % num;
+
+    controller = BTInterface(args.port, args.baud, num, args.basetempo);
+
+    while True:
+        print controller.get();
+        time.sleep(.01);

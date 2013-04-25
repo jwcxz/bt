@@ -1,0 +1,12 @@
+#!/usr/bin/env python2
+
+import serial
+
+cxn = serial.Serial('/dev/ttyUSB0', 115200);
+
+last = cxn.read(1);
+while True:
+    temp = cxn.read(1);
+    if temp != last:
+        print "UNS %x %x" %(ord(temp),ord(last));
+        last = temp;
