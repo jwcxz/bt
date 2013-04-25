@@ -1,0 +1,42 @@
+\documentclass[letterpaper]{article}
+\include{environment}
+\usepackage[colorlinks=true, linkcolor=linkcolor]{hyperref}
+\title{\projname{} - A Realtime Beat Tracker \\ Implementation Status}
+\begin{document}
+
+\maketitle
+
+\section{Current Status}
+
+    The basic metronome design has been built and I'm currently implementing
+    the beat classifier.  I've gotten the top level module to interface with
+    VHDL nicely.
+
+\section{Exploration}
+
+    As I have mentioned, I'd like to possibly implement a more complicated beat
+    classifier that is frequency-dependent instead of just looking at general
+    energy.  There are a few algorithms that I have been investigating, but the
+    most likely candidate is one from the Media
+    Lab\footnote{\url{http://www.clear.rice.edu/elec301/Projects01/beat_sync/beatalgo.html}}.
+
+    Given enough time, I'll probably also be looking at adjusting a variety of
+    parameters to improve convergence time as much as possible.  There are a
+    variety of things one can adjust and in my code, I've tried to make the
+    system as parameterizable as possible.  For example,
+    
+    \begin{itemize}
+        \item \textbf{Sample Width} --- I'm truncating sample sizes in order to
+            conserve resources, but retaining more bits might improve beat
+            classification.
+
+        \item \textbf{Counter Precision} --- More bits in the metronome counter
+            denominator means more accuracy.
+            
+        \item \textbf{Tempo Field Narrowing}  --- The frequency with which the
+            metronome bank controller changes the metronome tempos directly
+            impacts the convergence time.
+    \end{itemize}
+
+
+\end{document}

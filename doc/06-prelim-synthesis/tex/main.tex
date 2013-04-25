@@ -1,0 +1,74 @@
+\documentclass[letterpaper]{article}
+\include{environment}
+\usepackage[colorlinks=true, linkcolor=linkcolor]{hyperref}
+\title{\projname{} - A Realtime Beat Tracker \\ Preliminary Synthesis Results}
+\begin{document}
+
+\maketitle
+
+\section{Current Status}
+
+    Timing issues that were discussed in the last meeting were resolved thanks
+    to Asif's suggestions.  Bits are flowing end to end now and I'm working on
+    making the algorithm correct.  I haven't had a chance to implement field
+    narrowing yet, but I will attempt to do so within a week.  It should not
+    represent a major area or timing constraint and so should not be a blocker
+    that requires total redesign.
+
+\section{Preliminary Synthesis Results}
+
+    I've been designing this project very close to hardware -- I do live
+    hardware testing just as much as I do simulation testing.  So I've been
+    conscious of device timing and area constraints the entire time.
+
+    I've been testing with just 3 metronomes. The synthesis results that the
+    logic usage is absolutely tiny:
+
+\begin{monospace}
+Device utilization summary:
+---------------------------
+
+Selected Device : 3s700anfgg484-4 
+
+ Number of Slices:           422  out of   5888     7%
+ Number of Slice Flip Flops: 440  out of  11776     3%
+ Number of 4 input LUTs:     769  out of  11776     6%
+    Number used as logic:    729
+    Number used as RAMs:      40
+ Number of IOs:               36
+ Number of bonded IOBs:       25  out of    372     6%
+ Number of MULT18X18SIOs:      1  out of     20     5%
+ Number of GCLKs:              2  out of     24     8%
+ Number of DCMs:               1  out of      8    12%
+\end{monospace}
+
+Examining the timing analysis report, the critical path is through the beat
+classifier, with the majority of the time is from the energy calculation path.
+
+Let's take a look if we bump the number of metronomes up to 63:
+\begin{monospace}
+Device utilization summary:
+---------------------------
+
+Selected Device : 3s700anfgg484-4 
+
+ Number of Slices:           2138  out of   5888    36%
+ Number of Slice Flip Flops: 2806  out of  11776    23%
+ Number of 4 input LUTs:     3934  out of  11776    33%
+ Number of IOs:                36
+ Number of bonded IOBs:        25  out of    372     6%
+ Number of BRAMs:               1  out of     20     5%
+ Number of MULT18X18SIOs:       1  out of     20     5%
+ Number of GCLKs:               2  out of     24     8%
+ Number of DCMs:                1  out of      8    12%
+\end{monospace}
+
+The critical path is once again through the beat classifier to the new beat
+injector.
+
+Right now, attempts at building with 120 metronomes fails to meet timing but I
+bet I could probably get it to synthesize properly with some work.  This would
+eliminate the need for field narrowing.
+
+
+\end{document}

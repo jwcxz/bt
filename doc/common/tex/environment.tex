@@ -1,3 +1,4 @@
+\usepackage{alltt}
 \usepackage{graphicx}
 \usepackage{xspace}
 \usepackage{color}
@@ -5,6 +6,8 @@
 
 \newcommand{\ttt}[1]{\texttt{#1}}
 \newcommand{\projname}{\ttt{bt}\xspace}
+
+\newenvironment{monospace}{\begin{quote}\begin{alltt}}{\end{alltt}\end{quote}}
 
 \author{Joe Colosimo \\ \small{colosimo@mit.edu} \\ Group 6}
 \date{\today}
