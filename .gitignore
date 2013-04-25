@@ -1,10 +1,15 @@
 *.py[cod]
 
+*.dat
+
 doc/*/out
 
 tests/
 
 ref/s3demo
+
+sim/out
+sim/out.so
 
 fpga/xil
 fpga/build/license.sh
