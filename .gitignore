@@ -8,6 +8,10 @@ tests/
 
 ref/s3demo
 
+fpga/bsc/*.bo
+fpga/bsc/*.ba
+fpga/bsc/out
+sim/bsc
 sim/out
 sim/out.so
 
