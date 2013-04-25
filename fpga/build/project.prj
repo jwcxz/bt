@@ -11,6 +11,7 @@ vhdl work "hdl/pkg/data_sizes.vhd"
 vhdl work "hdl/sample_injector.vhd"
 
 verilog work "/opt/bluespec/lib/Verilog/FIFO1.v"
+verilog work "/opt/bluespec/lib/Verilog/SizedFIFO.v"
 verilog work "hdl/beat_tracker.v"
 
 vhdl work "hdl/top.vhd"

@@ -49,12 +49,15 @@ end project;
 
 architecture project_arch of project is
 
-    constant BT_INFO_SZ : integer := 20;
+    constant BT_INFO_SZ : integer := 8;
 
     component mkBeatTracker is
         port (
             CLK : in std_logic;
             RST_N : in std_logic;
+
+            EN_q_sync  : in  std_logic;
+            RDY_q_sync : out std_logic;
 
             putSampleInput_in  : in std_logic_vector(13 downto 0);
             EN_putSampleInput  : in std_logic;
@@ -72,10 +75,13 @@ architecture project_arch of project is
 
     signal uart_din, uart_dout : std_logic_vector(7 downto 0);
     signal uart_wr, uart_rd, uart_rda, uart_tbe : std_logic;
+    signal uart_out_sync : std_logic;
 
     signal amp_cfg, adc_start, amp_done, adc_done : std_logic;
     signal amp_gain     : std_logic_vector(7 downto 0);
     signal adc_a, adc_b : std_logic_vector(13 downto 0);
+
+    signal bt_sync_en, bt_sync_rdy : std_logic;
 
     signal sample_rdy, sample_rd : std_logic;
     signal sample : std_logic_vector(SAMPLE_WIDTH-1 downto 0);
@@ -103,9 +109,9 @@ begin
         );
 
     -- hold clocking reset for a few clock cycles to let things settle
-    rst_hold : process(clk50)
+    rst_hold : process(clk25)
     begin
-        if (rising_edge(clk50)) then
+        if (rising_edge(clk25)) then
             if (clk_locked = '0') then
                 clk_rst <= '1';
                 rst_dcount <= (others => '0');
@@ -140,9 +146,9 @@ begin
 
 
     -- led control
-    process (clk50)
+    process (clk25)
     begin
-        if (rising_edge(clk50)) then
+        if (rising_edge(clk25)) then
             if (sample_rdy = '1') then
                 if sample(sample'high) = '1' then
                     led <= not sample(sample'high-1 downto sample'high-8);
@@ -158,19 +164,19 @@ begin
     uart_inst : entity Rs232RefComp
         generic map (
             --baudDivide => x"A3"
-            baudDivide => x"0D" -- 115200
+            baudDivide => x"06" -- 115200
         )
         port map (
             txd => rs232_dce_txd,
             rxd => rs232_dce_rxd,
-            clk => clk50,
+            clk => clk25,
             rst => rst,
             
             dbin => uart_din,
             wr   => uart_wr,
 
             dbout => uart_dout,
-            rd    => uart_rda,
+            rd    => uart_rd,
             pe    => open,
             fe    => open,
             oe    => open,
@@ -184,7 +190,7 @@ begin
     amp_shdn <= '0';
     amp_adc_inst : entity amp_adc
         port map (
-            clk => clk50,
+            clk => clk25,
             rst => rst,
 
             amp_cfg  => amp_cfg,
@@ -208,7 +214,7 @@ begin
     -- sample injector
     sample_injector_inst : entity sample_injector
         port map (
-            clk => clk50,
+            clk => clk25,
             rst => rst,
 
             amp_cfg   => amp_cfg,
@@ -228,8 +234,11 @@ begin
     -- main processor
     beat_tracker_inst : mkBeatTracker
         port map (
-            CLK => clk50,
+            CLK => clk25,
             RST_N => rst_n,
+
+            EN_q_sync  => bt_sync_en,
+            RDY_q_sync => bt_sync_rdy,
 
             putSampleInput_in  => bt_sample_in,
             EN_putSampleInput  => bt_sample_en,
@@ -244,10 +253,29 @@ begin
 
     -- blinky LEDs
 
-    -- serial output
-    process (clk50)
+    -- serial synchronization
+    process (clk25)
     begin
-        if (rising_edge(clk50)) then
+        if (rising_edge(clk25)) then
+            if (rst = '1') then
+                uart_rd <= '0';
+            else
+                if (uart_rda = '1') then
+                    uart_rd <= '1';
+                else
+                    uart_rd <= '0';
+                end if;
+            end if;
+        end if;
+    end process;
+
+    bt_sync_en <= uart_rda;
+
+
+    -- serial output
+    process (clk25)
+    begin
+        if (rising_edge(clk25)) then
             if (rst = '1') then
                 uart_din <= (others => '0');
                 uart_wr  <= '0';
@@ -267,7 +295,7 @@ begin
     bt_sample_en <= sample_rdy and bt_sample_rdy;
     sample_rd <= sample_rdy and bt_sample_rdy;
 
-    bt_info_en <= bt_info_rdy;
+    bt_info_en <= bt_info_rdy and uart_tbe;
 
     chipscope_icon_inst : entity chipscope_icon
         port map (
@@ -277,24 +305,26 @@ begin
     chipscope_ila_inst : entity chipscope_ila
         port map (
             CONTROL => cs_control,
-            CLK => clk50,
+            CLK => clk25,
             DATA => cs_data,
             TRIG0 => cs_trig
         );
 
-    reg_ila : process(clk50)
+    reg_ila : process(clk25)
     begin
-        if (rising_edge(clk50)) then
+        if (rising_edge(clk25)) then
             if (rst='1') then
                 cs_trig <= (others => '0');
                 cs_data <= (others => '0');
 
             else 
-                cs_trig <= (7 downto 2 => '0') & bt_info_rdy & sample_rdy;
-                cs_data <= (127 downto 71 => '0') &
-                           uart_din & -- 70:63
-                           uart_wr & -- 62
-                           x"00" & bt_info & -- 61:34
+                cs_trig <= (7 downto 3 => '0') & uart_rda & bt_info_rdy & sample_rdy;
+                cs_data <= (127 downto 53 => '0') &
+                           bt_sync_en & -- 52
+                           uart_rda & -- 51
+                           uart_din & -- 50:43
+                           uart_wr & -- 42
+                           bt_info & -- 41:34
                            bt_info_en & -- 33
                            bt_info_rdy & -- 32
                            bt_sample_in & -- 31:18

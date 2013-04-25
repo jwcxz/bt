@@ -26,9 +26,8 @@ module mkBeatClassifier(BeatClassifier);
         let sample = infifo.first();
         infifo.deq();
 
-        SampleEnergy rsample = extend(unpack(sample));
-        SampleEnergy energy = rsample * rsample;
-        //$display("got: ", fshow(sample), fshow(rsample), fshow(energy));
+        Int#(14) rsample = unpack(sample);
+        SampleEnergy energy = signedMul(rsample, rsample);
         
         cur_energy <= cur_energy + energy/fromInteger(sample_count_max+1);
         sample_count <= sample_count + 1;
@@ -58,6 +57,46 @@ module mkBeatClassifier(BeatClassifier);
         sample_count <= 0;
     endrule
     // */
+
+    interface Put request = toPut(infifo);
+    interface Get response = toGet(outfifo);
+endmodule
+
+
+module mkBeatClassifierTest(BeatClassifier);
+    FIFO#(AudioSample) infifo  <- mkFIFO1();
+    FIFO#(BeatGuess)   outfifo <- mkFIFO1();
+
+
+    Reg#(PulserCount) mpc <- mkReg(0);
+    Reg#(Bool) tick <- mkReg(False);
+
+    Reg#(TempoIncrement) increment <- mkReg(calc_tempo_increment(120));
+    Reg#(MetronomeCounter) counter <- mkReg(0);
+
+    rule ignore(True);
+        let sample = infifo.first();
+        infifo.deq();
+    endrule
+
+    rule pulser(True);
+        if (mpc != fromInteger(pulser_count_max)) begin
+            mpc <= mpc + 1;
+            tick <= False;
+        end else begin
+            mpc <= 0;
+            tick <= True;
+        end
+    endrule
+
+    rule metronome_counter(tick);
+        if (counter + increment < counter) begin
+            BeatGuess x = fromInteger(0);
+            outfifo.enq(x);
+        end
+
+        counter <= counter + increment;
+    endrule
 
     interface Put request = toPut(infifo);
     interface Get response = toGet(outfifo);

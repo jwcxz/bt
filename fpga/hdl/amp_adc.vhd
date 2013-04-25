@@ -93,7 +93,7 @@ begin
             if (rst = '1') then
                 pulse_count <= (others => '0');
             else
-                if pulse_count = 12 then
+                if pulse_count = 6 then
                     pulse_count <= (others => '0');
                     slow_pulse <= '1';
                 else

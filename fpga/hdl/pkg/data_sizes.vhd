@@ -8,8 +8,8 @@ package dsize_pkg is
 
     --constant SAMPLE_COUNT_MAX   : integer := 250000;
     --constant SAMPLE_COUNT_MAX   : integer := 4545;
-    constant SAMPLE_COUNT_MAX   : integer := 1042;
+    constant SAMPLE_COUNT_MAX   : integer := 521;
 
-    constant SAMPLE_COUNT_WIDTH : integer := 26;
+    constant SAMPLE_COUNT_WIDTH : integer := 10;
 
 end dsize_pkg;

@@ -18,6 +18,9 @@ module mkTestbench(Empty);
     Reg#(Bool) init_done <- mkReg(False);
     Reg#(Bool) read_done <- mkReg(False);
 
+    Reg#(Bool) tick <- mkReg(False);
+    Reg#(UInt#(10)) tick_count <- mkReg(0);
+
     rule init(!init_done);
         init_done <= True;
 
@@ -36,7 +39,21 @@ module mkTestbench(Empty);
         fw <= t_out;
     endrule
 
-    rule read(init_done && !read_done);
+    rule sync(True);
+        bt.q_sync();
+    endrule
+
+    rule generate_tick(init_done);
+        if (tick_count == fromInteger(521)) begin
+            tick_count <= 0;
+            tick <= True;
+        end else begin
+            tick_count <= tick_count + 1;
+            tick <= False;
+        end
+    endrule
+
+    rule read(init_done && !read_done && tick);
         int a <- $fgetc(fr);
         int b <- $fgetc(fr);
 
@@ -56,16 +73,7 @@ module mkTestbench(Empty);
 
     rule write(init_done);
         TopLvlOut dout <- bt.getBeatInfo();
-
-        Bit#(8) a8 = 8'b00000000;
-        Bit#(8) b8 = {4'b0000, pack(dout)[19:16]};
-        Bit#(8) c8 = pack(dout)[15:8];
-        Bit#(8) d8 = pack(dout)[7:0];
-
-        $fwrite(fw, "%c", a8);
-        $fwrite(fw, "%c", b8);
-        $fwrite(fw, "%c", c8);
-        $fwrite(fw, "%c", d8);
+        $fwrite(fw, "%c", dout);
     endrule
 
     rule finish(read_done);
