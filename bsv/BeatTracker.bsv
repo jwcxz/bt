@@ -37,14 +37,14 @@ module mkBeatTracker(BeatTracker);
     Reg#(UInt#(TLog#(TAdd#(NumMetronomes,1)))) mb_out_count <- mkReg(0);
 
     rule init(!init_done);
-        //*
-        mb[0].set_tempo(calc_tempo_increment(120));
-        mb[1].set_tempo(calc_tempo_increment(130));
-        mb[2].set_tempo(calc_tempo_increment(140));
-        mb[3].set_tempo(calc_tempo_increment(150));
+        /*
+        mb[0].set_tempo(calc_tempo_increment(150));
+        mb[1].set_tempo(calc_tempo_increment(140));
+        mb[2].set_tempo(calc_tempo_increment(130));
+        mb[3].set_tempo(calc_tempo_increment(120));
         // */
 
-        /* {{{
+        //* {{{
         for (Integer m=0; m<valueof(NumMetronomes); m=m+1) begin
             mb[m].set_tempo(calc_tempo_increment(min_tempo+fromInteger(m)));
         end
@@ -81,20 +81,19 @@ module mkBeatTracker(BeatTracker);
 
             if ( mb_out_count == fromInteger(valueof(TSub#(NumMetronomes, 1))) ) begin
                 mb_out_count <= fromInteger(0);
+                sync_next <= False;
             end else begin
                 mb_out_count <= mb_out_count + fromInteger(1);
             end
         end
         
         let x <- mb[mb_out_count].inject_beat(beat_guess_i);
-        TopLvlOut dout = pack(x)[valueof(MetronomeCounterSize)-1:valueof(MetronomeCounterSize)-8];
-
-        if (sync_next) bt_info.enq(dout);
+        if (sync_next) bt_info.enq(make_output(x));
     endrule
     // }}} */
 
 
-    //* {{{
+    /* {{{
     rule beat_injector_start(init_done && mb_out_count == fromInteger(0));
         let beat_guess_i <- bc.response.get();
         beat_guess <= beat_guess_i;
@@ -120,7 +119,7 @@ module mkBeatTracker(BeatTracker);
     // }}} */
 
 
-    /* {{{
+    //* {{{
     rule beat_injector_start(init_done && mb_out_count == fromInteger(0));
         let beat_guess_i <- bc.response.get();
         beat_guess <= beat_guess_i;
@@ -128,41 +127,24 @@ module mkBeatTracker(BeatTracker);
         let x <- mb[0].inject_beat(beat_guess_i);
         if (sync_next) bt_info.enq(make_output(x));
 
+        sync_this <= sync_next;
+        sync_next <= False;
+
         if (valueof(NumMetronomes) > 1) begin
             mb_out_count <= fromInteger(1);
-        end else begin
-            sync_next <= False;
         end
     endrule
 
     rule beat_injector_cont(init_done &&
                             mb_out_count > fromInteger(0) &&
                             mb_out_count < fromInteger(valueof(NumMetronomes)));
-
         let x <- mb[mb_out_count].inject_beat(beat_guess);
-        if (sync_next) bt_info.enq(make_output(x));
+        if (sync_this) bt_info.enq(make_output(x));
 
         if ( mb_out_count == fromInteger(valueof(TSub#(NumMetronomes, 1))) ) begin
             mb_out_count <= fromInteger(0);
-            sync_next <= False;
         end else begin
             mb_out_count <= mb_out_count + fromInteger(1);
-        end
-    endrule
-    // }}} */
-
-
-    /* {{{
-    rule beat_injector(init_done);
-        let beat_info <- bc.response.get();
-
-        for (Integer m=0; m<valueof(NumMetronomes); m=m+1) begin
-            let x <- mb[m].inject_beat(beat_info);
-            bt_info.enq(pack(x));
-
-            if (m==0) begin
-                bt_info.enq(pack(x));
-            end
         end
     endrule
     // }}} */

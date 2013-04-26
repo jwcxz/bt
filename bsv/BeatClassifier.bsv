@@ -71,7 +71,7 @@ module mkBeatClassifierTest(BeatClassifier);
     Reg#(PulserCount) mpc <- mkReg(0);
     Reg#(Bool) tick <- mkReg(False);
 
-    Reg#(TempoIncrement) increment <- mkReg(calc_tempo_increment(120));
+    Reg#(TempoIncrement) increment <- mkReg(calc_tempo_increment(125/4.0));
     Reg#(MetronomeCounter) counter <- mkReg(0);
 
     rule ignore(True);

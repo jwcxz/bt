@@ -8,6 +8,15 @@ DEF_BAUD = 115200;
 DEF_NUM  = 60;
 DEF_BASE = 120;
 
+unicodechars = u'\u2588\u2502\u2502\u2502';
+
+colors = {
+        'clear':  '\033[0m',
+        'green':  '\033[92m',
+        'yellow': '\033[93m',
+        'red':    '\033[91m'
+        }
+
 class BTInterface:
     def __init__(self, port=DEF_PORT, baud=DEF_BAUD, num=DEF_NUM, base=DEF_BASE):
 
@@ -23,10 +32,51 @@ class BTInterface:
         
         tempo = self.base;
         for c in data:
-            out[tempo] = ord(c);
+            out[tempo] = self.__convt(ord(c));
             tempo += 1;
 
         return out;
+
+    def __convt(self, x):
+        # get real phase
+        if (x & 0x80):
+            return -(((~x)&0x7F)+1)
+        else:
+            return x;
+
+
+def histogram(val, maxval=128, half_width=20, chars=unicodechars, colors=colors):
+    #center = width/2;
+    bar_sz = int(round(half_width*abs(val)/float(maxval)));
+
+    if colors:
+        cc = colors['clear'];
+
+        # calculate bar color
+        if abs(val) <= maxval/3.:
+            c = colors['green'];
+        elif abs(val) <= maxval*2/3.:
+            c = colors['yellow'];
+        else:
+            c = colors['red'];
+    else:
+        cc = '';
+        c = '';
+
+    
+    out = " "*half_width;
+    out += chars[1];
+    out += chars[0]*bar_sz;
+    out += " "*(half_width-bar_sz);
+
+    if val < 0: out = out[::-1];
+
+    return c + chars[2] + out + chars[3] + cc;
+
+
+
+def clear_screen():
+    print chr(27) + "[2J";
 
 
 if __name__ == "__main__":
@@ -40,35 +90,63 @@ if __name__ == "__main__":
 
 
     p.add_argument('-B', '--base-tempo', dest='basetempo', type=int,
-            action='store', default=DEF_BASE, help='base tempo');
+            action='store', default=DEF_BASE, help='manually set base tempo');
 
     p.add_argument('-n', '--num-metronomes', dest='nummetronomes', type=int,
             action='store', default=DEF_NUM,
             help='manually set number of metronomes');
 
-    p.add_argument('-a', '--metronome-file', dest='autometronome', type=str,
+    p.add_argument('-a', '--auto', dest='auto', type=str,
             action='store', default=None,
-            help='automatically get number of metronomes from a BSV file');
+            help='automatically get number of metronomes and base tempo from a BSV file');
 
     args = p.parse_args();
 
+    decay = 0.25;
+
 
     num = args.nummetronomes;
-    if args.autometronome != None:
-        srch = re.compile('.*typedef\s+(?P<num>\d+)\s+NumMetronomes;.*');
-        f = open(args.autometronome, 'r');
+    base = args.basetempo;
+
+    if args.auto != None:
+        re_met = re.compile('.*typedef\s+(?P<num>\d+)\s+NumMetronomes;.*');
+        re_base = re.compile('.*Real\s+min_tempo\s+=\s+(?P<base>\d+)\s*;.*');
+        f = open(args.auto, 'r');
 
         for line in f:
-            if srch.search(line):
-                num = int(srch.search(line).groupdict()['num']);
-                break;
+            if re_met.search(line):
+                num = int(re_met.search(line).groupdict()['num']);
+            elif re_base.search(line):
+                base = int(re_base.search(line).groupdict()['base']);
 
         f.close();
 
-    print "Grabbing data from %d metronomes..." % num;
+    print "Grabbing data from %d metronomes with base tempo %d..." % (num, base);
 
-    controller = BTInterface(args.port, args.baud, num, args.basetempo);
+    controller = BTInterface(args.port, args.baud, num, base);
+
+    average = controller.get();
 
     while True:
-        print controller.get();
+        data = controller.get();
+
+        clear_screen();
+
+        best = None;
+
+        for tempo in sorted(data.keys()):
+            average[tempo] = (1 - decay) * average[tempo] + (decay) * data[tempo];
+
+            if best == None or abs(average[tempo]) < abs(average[best]):
+                best = tempo;
+
+            print "%3d: %4d  %4d   %s" % (
+                    tempo,
+                    data[tempo],
+                    average[tempo],
+                    histogram(average[tempo])
+                    );
+
+        print ""
+        print "Best Tempo Estimate: %d BPM  [%d / %d]" % (best, data[best], average[best]);
         time.sleep(.01);

@@ -271,31 +271,48 @@ begin
 
     bt_sync_en <= uart_rda;
 
+    bt_info_en <= bt_info_rdy and uart_tbe;
+    uart_wr  <= bt_info_rdy and uart_tbe;
+    --uart_din <= bt_info;
 
-    -- serial output
     process (clk25)
     begin
         if (rising_edge(clk25)) then
             if (rst = '1') then
                 uart_din <= (others => '0');
-                uart_wr  <= '0';
             else
-                if (bt_info_rdy = '1') then
-                    uart_din <= bt_info(bt_info'high downto bt_info'high-7);
-                    uart_wr  <= uart_tbe;
-                else
-                    uart_wr <= '0';
+                if (bt_info_rdy = '1' and uart_tbe = '1') then
+                    uart_din <= bt_info;
                 end if;
-
             end if;
         end if;
     end process;
+
+
+    -- serial output
+--    process (clk25)
+--    begin
+--        if (rising_edge(clk25)) then
+--            if (rst = '1') then
+--                uart_din <= (others => '0');
+--                uart_wr  <= '0';
+--            else
+--                if (bt_info_rdy = '1') then
+--                    uart_din <= bt_info(bt_info'high downto bt_info'high-7);
+--                    uart_wr  <= uart_tbe;
+--                else
+--                    uart_wr <= '0';
+--                end if;
+--
+--            end if;
+--        end if;
+--    end process;
+
 
     bt_sample_in <= sample;
     bt_sample_en <= sample_rdy and bt_sample_rdy;
     sample_rd <= sample_rdy and bt_sample_rdy;
 
-    bt_info_en <= bt_info_rdy and uart_tbe;
 
     chipscope_icon_inst : entity chipscope_icon
         port map (
@@ -320,7 +337,7 @@ begin
             else 
                 cs_trig <= (7 downto 3 => '0') & uart_rda & bt_info_rdy & sample_rdy;
                 cs_data <= (127 downto 53 => '0') &
-                           bt_sync_en & -- 52
+                           uart_tbe & -- 52
                            uart_rda & -- 51
                            uart_din & -- 50:43
                            uart_wr & -- 42
