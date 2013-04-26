@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     args = p.parse_args();
 
-    decay = 0.25;
+    decay = 0.1;
 
 
     num = args.nummetronomes;
