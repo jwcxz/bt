@@ -231,6 +231,7 @@ begin
             sample_rd  => sample_rd
         );
 
+
     -- main processor
     beat_tracker_inst : mkBeatTracker
         port map (
@@ -249,9 +250,6 @@ begin
             RDY_getBeatInfo => bt_info_rdy
         );
 
-    -- tempo extractor
-
-    -- blinky LEDs
 
     -- serial synchronization
     process (clk25)
@@ -269,11 +267,17 @@ begin
         end if;
     end process;
 
+
     bt_sync_en <= uart_rda;
+
+
+    bt_sample_in <= sample;
+    bt_sample_en <= sample_rdy and bt_sample_rdy;
+    sample_rd <= sample_rdy and bt_sample_rdy;
+
 
     bt_info_en <= bt_info_rdy and uart_tbe;
     uart_wr  <= bt_info_rdy and uart_tbe;
-    --uart_din <= bt_info;
 
     process (clk25)
     begin
@@ -289,69 +293,44 @@ begin
     end process;
 
 
-    -- serial output
---    process (clk25)
+--    chipscope_icon_inst : entity chipscope_icon
+--        port map (
+--            CONTROL0 => cs_control
+--        );
+--
+--    chipscope_ila_inst : entity chipscope_ila
+--        port map (
+--            CONTROL => cs_control,
+--            CLK => clk25,
+--            DATA => cs_data,
+--            TRIG0 => cs_trig
+--        );
+--
+--    reg_ila : process(clk25)
 --    begin
 --        if (rising_edge(clk25)) then
---            if (rst = '1') then
---                uart_din <= (others => '0');
---                uart_wr  <= '0';
---            else
---                if (bt_info_rdy = '1') then
---                    uart_din <= bt_info(bt_info'high downto bt_info'high-7);
---                    uart_wr  <= uart_tbe;
---                else
---                    uart_wr <= '0';
---                end if;
+--            if (rst='1') then
+--                cs_trig <= (others => '0');
+--                cs_data <= (others => '0');
 --
+--            else 
+--                cs_trig <= (7 downto 3 => '0') & uart_rda & bt_info_rdy & sample_rdy;
+--                cs_data <= (127 downto 53 => '0') &
+--                           uart_tbe & -- 52
+--                           uart_rda & -- 51
+--                           uart_din & -- 50:43
+--                           uart_wr & -- 42
+--                           bt_info & -- 41:34
+--                           bt_info_en & -- 33
+--                           bt_info_rdy & -- 32
+--                           bt_sample_in & -- 31:18
+--                           bt_sample_en & -- 17
+--                           bt_sample_rdy & -- 16
+--                           sample & -- 15:2
+--                           sample_rd & -- 1
+--                           sample_rdy; -- 0
 --            end if;
 --        end if;
 --    end process;
-
-
-    bt_sample_in <= sample;
-    bt_sample_en <= sample_rdy and bt_sample_rdy;
-    sample_rd <= sample_rdy and bt_sample_rdy;
-
-
-    chipscope_icon_inst : entity chipscope_icon
-        port map (
-            CONTROL0 => cs_control
-        );
-
-    chipscope_ila_inst : entity chipscope_ila
-        port map (
-            CONTROL => cs_control,
-            CLK => clk25,
-            DATA => cs_data,
-            TRIG0 => cs_trig
-        );
-
-    reg_ila : process(clk25)
-    begin
-        if (rising_edge(clk25)) then
-            if (rst='1') then
-                cs_trig <= (others => '0');
-                cs_data <= (others => '0');
-
-            else 
-                cs_trig <= (7 downto 3 => '0') & uart_rda & bt_info_rdy & sample_rdy;
-                cs_data <= (127 downto 53 => '0') &
-                           uart_tbe & -- 52
-                           uart_rda & -- 51
-                           uart_din & -- 50:43
-                           uart_wr & -- 42
-                           bt_info & -- 41:34
-                           bt_info_en & -- 33
-                           bt_info_rdy & -- 32
-                           bt_sample_in & -- 31:18
-                           bt_sample_en & -- 17
-                           bt_sample_rdy & -- 16
-                           sample & -- 15:2
-                           sample_rd & -- 1
-                           sample_rdy; -- 0
-            end if;
-        end if;
-    end process;
 
 end architecture;
