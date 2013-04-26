@@ -36,15 +36,20 @@ module mkBeatClassifier(BeatClassifier);
 
     //*
     rule compare_energies (sample_count == fromInteger(sample_count_max));
-        if (cur_energy > avg_energy + (avg_energy/2)) begin
+        if (cur_energy > avg_energy + (avg_energy/4)) begin
             $display("UNS ", fshow(cur_energy), "/", fshow(avg_energy));
 
             BeatGuess x = pack(avg_energy);
             outfifo.enq(x);
         end
 
-        //*
+        /*
         avg_energy <= (avg_energy/2) + (cur_energy/2);
+        // */
+
+        //*
+        avg_energy <= (cur_energy/4) + 
+                      (avg_energy/2) + (avg_energy/4);
         // */
 
         /*

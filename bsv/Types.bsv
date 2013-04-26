@@ -10,7 +10,7 @@ Real min_tempo = 120;
 typedef 60 NumMetronomes;
 
 // number of samples to store in energy calculation buffer
-typedef 12 SampleCountSize;
+typedef 11 SampleCountSize;
 
 // metronome pulse frequency: clk_freq / 2**MetronomePulseCountSize
 typedef 9 PulserCountSize;
