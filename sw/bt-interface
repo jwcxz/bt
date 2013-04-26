@@ -8,7 +8,21 @@ DEF_BAUD = 115200;
 DEF_NUM  = 60;
 DEF_BASE = 120;
 
-unicodechars = u'\u2588\u2502\u2502\u2502';
+unicodechars = {
+        '#': u'\u2588',
+        '|': u'\u2502',
+        '-': u'\u2500',
+        'tl': u'\u250c',
+        'tr': u'\u2510',
+        'bl': u'\u2514',
+        'br': u'\u2518',
+        'ml': u'\u251c',
+        'mr': u'\u2524',
+        'mt': u'\u2534',
+        'mb': u'\u252c',
+        'mm': u'\u253c',
+        }
+
 
 colors = {
         'clear':  '\033[0m',
@@ -44,11 +58,7 @@ class BTInterface:
         else:
             return x;
 
-
-def histogram(val, maxval=128, half_width=20, chars=unicodechars, colors=colors):
-    #center = width/2;
-    bar_sz = int(round(half_width*abs(val)/float(maxval)));
-
+def line_color(val, maxval=128, colors=colors):
     if colors:
         cc = colors['clear'];
 
@@ -63,15 +73,22 @@ def histogram(val, maxval=128, half_width=20, chars=unicodechars, colors=colors)
         cc = '';
         c = '';
 
+    return (c,cc);
+
     
+
+def histogram(val, maxval=128, half_width=20, chars=unicodechars, colors=colors):
+    #center = width/2;
+    bar_sz = int(round(half_width*abs(val)/float(maxval)));
+
     out = " "*half_width;
-    out += chars[1];
-    out += chars[0]*bar_sz;
+    out += chars['|'];
+    out += chars['#']*bar_sz;
     out += " "*(half_width-bar_sz);
 
     if val < 0: out = out[::-1];
 
-    return c + chars[2] + out + chars[3] + cc;
+    return chars['|'] + out + chars['|'];
 
 
 
@@ -127,6 +144,8 @@ if __name__ == "__main__":
 
     average = controller.get();
 
+    ch = unicodechars;
+
     while True:
         data = controller.get();
 
@@ -134,19 +153,45 @@ if __name__ == "__main__":
 
         best = None;
 
+        print ch['tl'] + ch['-']*5 + ch['mb'] + (ch['-']*6 + ch['mb'])*2 + \
+                ch['-']*41 + ch['tr'];
+
+        print "%c BPM %c  cur %c  avg %c " %(
+                ch['|'], ch['|'],
+                ch['|'], ch['|']),
+        print " "*39 + ch['|'];
+
+        print ch['ml'] + ch['-']*5 + ch['mm'] + (ch['-']*6 + ch['mm'])*2 + \
+                ch['-']*20 + ch['mb'] + ch['-']*20 + ch['mr'];
+
         for tempo in sorted(data.keys()):
             average[tempo] = (1 - decay) * average[tempo] + (decay) * data[tempo];
 
             if best == None or abs(average[tempo]) < abs(average[best]):
                 best = tempo;
 
-            print "%3d: %4d  %4d   %s" % (
+            lc = line_color(average[tempo]);
+
+            print "%s%c %3d %c %4d %c %4d %s%s" % (
+                    lc[0],
+                    ch['|'],
                     tempo,
+                    ch['|'],
                     data[tempo],
+                    ch['|'],
                     average[tempo],
-                    histogram(average[tempo])
+                    histogram(average[tempo]),
+                    lc[1]
                     );
 
-        print ""
-        print "Best Tempo Estimate: %d BPM  [%d / %d]" % (best, data[best], average[best]);
+        print ch['ml'] + ch['-']*5 + ch['mt'] + (ch['-']*6 + ch['mt'])*2 + \
+                ch['-']*20 + ch['mt'] + ch['-']*20 + ch['mr'];
+
+        print "%c Best Tempo Estimate: %3d BPM  [%4d / %4d]" % (
+                ch['|'], best, data[best], average[best]),
+
+        print " "*16 + ch['|'];
+
+        print ch['bl'] + ch['-']*61 + ch['br'];
+
         time.sleep(.01);
