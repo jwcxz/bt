@@ -8,13 +8,19 @@ interface Metronome;
     method Action set_tempo(TempoIncrement t);
 endinterface
 
-module mkMetronome(Metronome);
+function Metronome instantiate_metronome(Integer tempo_offset);
+    real tempo = min_tempo + tempo_offset;
+    return mkMetronome(tempo);
+endfunction
+
+module mkMetronome(Real tempo_bpm, Metronome ifc);
+
+    TempoIncrement increment = calc_tempo_increment(tempo_bpm);
 
     Reg#(Bool) tick_pulse <- mkReg(False);
 
     Reg#(Bool) valid <- mkReg(False);
 
-    Reg#(TempoIncrement) increment <- mkReg(0);
     Reg#(MetronomeCounter) counter <- mkReg(0);
     Reg#(MetronomeCounter) last_counter <- mkReg(0);
 

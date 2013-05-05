@@ -5,9 +5,9 @@ import FShow::*;
 
 
 Real clk_freq = 25e6;
-Real min_tempo = 120;
+Real min_tempo = 80;
 
-typedef 60 NumMetronomes;
+typedef 65 NumMetronomes;
 
 // number of samples to store in energy calculation buffer
 typedef 11 SampleCountSize;
@@ -52,7 +52,7 @@ typedef MetronomeCounter PhaseErr;
 
 
 // Functions
-function TempoIncrement calc_tempo_increment (Real tempo);
+function TempoIncrement calc_tempo_increment(Real tempo);
     Real pulse_freq = clk_freq * 1/fromInteger(pulser_count_max+1);
     Real increment = tempo * 1/60.0 * (1/pulse_freq) * fromInteger(metronome_counter_max+1);
     

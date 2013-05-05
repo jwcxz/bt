@@ -21,37 +21,19 @@ endinterface
 module mkBeatTracker(BeatTracker);
 
     BeatClassifier bc <- mkBeatClassifier();
-    MetArr#(Metronome) mb <- replicateM(mkMetronome);
+    MetArr#(Metronome) mb <- genWithM(instantiate_metronome);
 
     FIFOF#(TopLvlOut) bt_info <- mkSizedFIFOF(valueof(NumMetronomes));
 
-    Reg#(Bool) init_done <- mkReg(False);
     Reg#(Bool) sync_next <- mkReg(False);
     Reg#(Bool) sync_this <- mkReg(False);
 
     Reg#(BeatGuess) beat_guess <- mkReg(0);
     Reg#(UInt#(TLog#(TAdd#(NumMetronomes,1)))) mb_out_count <- mkReg(0);
 
-    rule init(!init_done);
-        /* {{{
-        mb[0].set_tempo(calc_tempo_increment(150));
-        mb[1].set_tempo(calc_tempo_increment(140));
-        mb[2].set_tempo(calc_tempo_increment(130));
-        mb[3].set_tempo(calc_tempo_increment(120));
-        // }}} */
-
-        //* {{{
-        for (Integer m=0; m<valueof(NumMetronomes); m=m+1) begin
-            mb[m].set_tempo(calc_tempo_increment(min_tempo+fromInteger(m)));
-        end
-        // }}} */
-
-        init_done <= True;
-    endrule
-
 
     Reg#(PulserCount) mpc <- mkReg(0);
-    rule pulser(init_done);
+    rule pulser(True);
         if (mpc != fromInteger(pulser_count_max)) begin
             mpc <= mpc + 1;
         end else begin
@@ -63,7 +45,7 @@ module mkBeatTracker(BeatTracker);
     endrule
 
 
-    rule beat_injector_start(init_done && mb_out_count == fromInteger(0));
+    rule beat_injector_start(mb_out_count == fromInteger(0));
         let beat_guess_i <- bc.response.get();
         beat_guess <= beat_guess_i;
         
@@ -78,8 +60,7 @@ module mkBeatTracker(BeatTracker);
         end
     endrule
 
-    rule beat_injector_cont(init_done &&
-                            mb_out_count > fromInteger(0) &&
+    rule beat_injector_cont(mb_out_count > fromInteger(0) &&
                             mb_out_count < fromInteger(valueof(NumMetronomes)));
         let x <- mb[mb_out_count].inject_beat(beat_guess);
         if (sync_this) bt_info.enq(make_output(x));
