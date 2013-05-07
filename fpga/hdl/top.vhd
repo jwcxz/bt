@@ -59,7 +59,7 @@ architecture project_arch of project is
             EN_q_sync  : in  std_logic;
             RDY_q_sync : out std_logic;
 
-            putSampleInput_in  : in std_logic_vector(13 downto 0);
+            putSampleInput_in  : in std_logic_vector(2*SAMPLE_WIDTH-1 downto 0);
             EN_putSampleInput  : in std_logic;
             RDY_putSampleInput : out std_logic;
 
@@ -84,13 +84,13 @@ architecture project_arch of project is
     signal bt_sync_en, bt_sync_rdy : std_logic;
 
     signal sample_rdy, sample_rd : std_logic;
-    signal sample : std_logic_vector(SAMPLE_WIDTH-1 downto 0);
+    signal sample : std_logic_vector(2*SAMPLE_WIDTH-1 downto 0);
 
     signal cs_control : std_logic_vector(35 downto 0);
     signal cs_data : std_logic_vector(127 downto 0);
     signal cs_trig : std_logic_vector(7 downto 0);
 
-    signal bt_sample_in : std_logic_vector(13 downto 0);
+    signal bt_sample_in : std_logic_vector(2*SAMPLE_WIDTH-1 downto 0);
     signal bt_sample_en, bt_sample_rdy : std_logic;
 
     signal bt_info : std_logic_vector(BT_INFO_SZ-1 downto 0);

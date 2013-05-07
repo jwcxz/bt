@@ -66,8 +66,9 @@ module mkTestbench(Empty);
 
             Bit#(16) c = {a8, b8};
             Bit#(14) d = c[13:0];
+            Bit#(28) e = {d, d};
 
-            bt.putSampleInput(unpack(d));
+            bt.putSampleInput(unpack(e));
         end
     endrule
 

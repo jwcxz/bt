@@ -1,4 +1,5 @@
 import Types::*;
+import FIRFilter::*;
 import BeatClassifier::*;
 import Metronome::*;
 
@@ -14,14 +15,15 @@ import FIFOF::*;
 
 interface BeatTracker;
     method Action q_sync();
-    method Action putSampleInput(AudioSample in);
+    method Action putSampleInput(StereoAudioSample in);
     method ActionValue#(TopLvlOut) getBeatInfo();
 endinterface
 
 module mkBeatTracker(BeatTracker);
 
+    //FIRFilter fir <- mkFIRFilter(fir_coeffs);
     BeatClassifier bc <- mkBeatClassifier();
-    MetArr#(Metronome) mb <- genWithM(instantiate_metronome);
+    MetArr#(Metronome) mb <- genWithM(mkMetronome);
 
     FIFOF#(TopLvlOut) bt_info <- mkSizedFIFOF(valueof(NumMetronomes));
 
@@ -30,6 +32,14 @@ module mkBeatTracker(BeatTracker);
 
     Reg#(BeatGuess) beat_guess <- mkReg(0);
     Reg#(UInt#(TLog#(TAdd#(NumMetronomes,1)))) mb_out_count <- mkReg(0);
+
+
+    /*
+    rule fir_to_bc (True);
+        let x <- fir.response.get();
+        bc.request.put(x);
+    endrule
+    */
 
 
     Reg#(PulserCount) mpc <- mkReg(0);
@@ -78,8 +88,12 @@ module mkBeatTracker(BeatTracker);
     endmethod
 
 
-    method Action putSampleInput(AudioSample x);
-        bc.request.put(x);
+    method Action putSampleInput(StereoAudioSample in);
+        Int#(14) l = unpack(in[27:14]);
+        Int#(14) r = unpack(in[13:0]);
+        AudioSample a = AudioSample{ left: l, right: r };
+        bc.request.put(a);
+        //fir.request.put(a);
     endmethod
 
 

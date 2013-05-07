@@ -30,7 +30,7 @@ entity sample_injector is
         adc_b     : in  std_logic_vector(13 downto 0);
 
         sample_rdy : out std_logic;
-        sample     : out std_logic_vector(SAMPLE_WIDTH-1 downto 0);
+        sample     : out std_logic_vector(2*SAMPLE_WIDTH-1 downto 0);
         sample_rd  : in  std_logic
     );
 end sample_injector;
@@ -46,8 +46,6 @@ architecture sample_injector_arch of sample_injector is
     );
 
     signal state_next, state : state_type;
-
-    signal adc_sum : signed(adc_a'high+1 downto 0);
 
     signal start_conv  : std_logic;
     signal pulse_count : unsigned(SAMPLE_COUNT_WIDTH-1 downto 0);
@@ -65,8 +63,6 @@ begin
     dbg_start <= start_conv;
 
     gain <= ADC_GAIN;
-
-    adc_sum <= signed(adc_a) + signed(adc_b);
 
     sample_pulsegen : process(clk)
     begin
@@ -114,9 +110,7 @@ begin
 
                 if state = ST_CONVDONE then
                     sample_rdy <= '1';
-                    --sample <= std_logic_vector(adc_sum(adc_sum'high downto
-                    --                            adc_sum'high-sample'high));
-                    sample <= adc_a;
+                    sample <= adc_a & adc_a;
                 else
                     sample_rdy <= '0';
                 end if;

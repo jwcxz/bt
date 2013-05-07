@@ -10,7 +10,7 @@ Real min_tempo = 80;
 typedef 65 NumMetronomes;
 
 // number of samples to store in energy calculation buffer
-typedef 11 SampleCountSize;
+typedef 10 SampleCountSize;
 
 // metronome pulse frequency: clk_freq / 2**MetronomePulseCountSize
 typedef 9 PulserCountSize;
@@ -21,6 +21,12 @@ typedef 22 MetronomeCounterSize;
 
 
 // Top Level
+typedef Bit#(28) StereoAudioSample;
+typedef struct {
+    Int#(14) left;
+    Int#(14) right;
+} AudioSample deriving (Bits, Eq);
+
 typedef Vector#(NumMetronomes, t) MetArr#(type t);
 Integer num_metronomes = valueof(NumMetronomes);
 
@@ -32,14 +38,25 @@ typedef Bit#(8) TopLvlOut;
 
 
 // Beat Classifier
-typedef Bit#(14) AudioSample;
+typedef 64 AvgEnergyLength;
+typedef UInt#(TAdd#(TLog#(AvgEnergyLength),1)) EnergyStage;
+Integer avg_energy_length = valueof(AvgEnergyLength);
 
 typedef Int#(28) SampleEnergy;
 typedef UInt#(SampleCountSize) SampleCount;
 Integer sample_count_max = valueof(TSub#(TExp#(SampleCountSize), 1));
 
+
 typedef Bit#(28) BeatGuess;
 
+/* variance classifier types */
+typedef 26 VISize;
+typedef 16 VFSize;
+
+typedef UInt#(VISize)           Energy;
+typedef UInt#(TMul#(VISize,2))  SqEnergy;
+typedef UInt#(TMul#(VISize,3))  CuEnergy;
+typedef FixedPoint#(TAdd#(1, TMul#(VISize,3)), VFSize) LinReg;
 
 
 // Metronome
@@ -64,3 +81,25 @@ endfunction
 function TopLvlOut make_output(PhaseErr x);
     return pack(x)[valueof(MetronomeCounterSize)-1:valueof(MetronomeCounterSize)-8];
 endfunction
+
+
+// FIR Filter
+typedef 14 FIR_ISIZE;
+typedef 16 FIR_FSIZE;
+Vector#(13, FixedPoint#(FIR_ISIZE, FIR_FSIZE)) fir_coeffs =
+    cons(fromReal(-0.04463417126993918),
+    cons(fromReal(0.04910541101096455),
+    cons(fromReal(0.06189674038815581),
+    cons(fromReal(0.008906353853344689),
+    cons(fromReal(-0.12587987298491263),
+    cons(fromReal(-0.2765089776732705),
+    cons(fromReal(0.6573385628582229),
+    cons(fromReal(-0.2765089776732705),
+    cons(fromReal(-0.12587987298491263),
+    cons(fromReal(0.008906353853344689),
+    cons(fromReal(0.06189674038815581),
+    cons(fromReal(0.04910541101096455),
+    cons(fromReal(-0.04463417126993918),
+    nil)))))))))))));
+
+
