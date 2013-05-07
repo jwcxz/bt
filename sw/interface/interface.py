@@ -48,24 +48,25 @@ class BTPrinter:
     def disp_h(self, cur, avg, best):
         ch = self.c.chars;
 
-        self.c.clear_screen();
+        #out = self.c.clear_screen();
+        out = self.c.go_to(0,0);
 
-        print ch['tl'] + ch['-']*5 + ch['mb'] + (ch['-']*6 + ch['mb'])*2 + \
-                ch['-']*61 + ch['tr'];
+        out += ch['tl'] + ch['-']*5 + ch['mb'] + (ch['-']*6 + ch['mb'])*2 + \
+                ch['-']*61 + ch['tr'] + "\n";
 
-        print "%c BPM %c  cur %c  avg %c " %(
-                ch['|'], ch['|'],
-                ch['|'], ch['|']),
-        print " "*59 + ch['|'];
+        out += "%c BPM %c  cur %c  avg %c " %(
+                    ch['|'], ch['|'],
+                    ch['|'], ch['|']) + \
+                " "*60 + ch['|'] + "\n";
 
-        print ch['ml'] + ch['-']*5 + ch['mm'] + (ch['-']*6 + ch['mm'])*2 + \
-                ch['-']*30 + ch['mb'] + ch['-']*30 + ch['mr'];
+        out += ch['ml'] + ch['-']*5 + ch['mm'] + (ch['-']*6 + ch['mm'])*2 + \
+                ch['-']*30 + ch['mb'] + ch['-']*30 + ch['mr'] + "\n";
 
 
         for tempo in sorted(cur.keys()):
             lc = self.c.line_color(avg[tempo]);
 
-            print "%s%c %3d %c %4d %c %4d %c%s%c%s" % (
+            out += "%s%c %3d %c %4d %c %4d %c%s%c%s\n" % (
                     lc[0],
                     ch['|'],
                     tempo,
@@ -80,12 +81,13 @@ class BTPrinter:
                     );
 
 
-        print ch['ml'] + ch['-']*5 + ch['mt'] + (ch['-']*6 + ch['mt'])*2 + \
-                ch['-']*30 + ch['mt'] + ch['-']*30 + ch['mr'];
+        out += ch['ml'] + ch['-']*5 + ch['mt'] + (ch['-']*6 + ch['mt'])*2 + \
+                ch['-']*30 + ch['mt'] + ch['-']*30 + ch['mr'] + "\n";
 
-        print "%c Best Tempo Estimate: %3d BPM  [%4d / %4d]" % (
-                ch['|'], best, cur[best], avg[best]),
+        out += "%c Best Tempo Estimate: %3d BPM  [%4d / %4d]" % (
+                    ch['|'], best, cur[best], avg[best]) + \
+                " "*37 + ch['|'] + "\n";
 
-        print " "*36 + ch['|'];
+        out += ch['bl'] + ch['-']*81 + ch['br'];
 
-        print ch['bl'] + ch['-']*81 + ch['br'];
+        print out

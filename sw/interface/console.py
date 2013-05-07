@@ -62,4 +62,8 @@ class Console:
 
 
     def clear_screen(self):
-        print chr(27) + "[2J";
+        return chr(27) + "[2J";
+
+    def go_to(self, x, y):
+        return "\033[%d;%dH" %(x, y);
+

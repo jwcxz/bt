@@ -55,6 +55,8 @@ if __name__ == "__main__":
 
     average = controller.get();
 
+    print cs.clear_screen();
+
     while True:
         data = controller.get();
 
