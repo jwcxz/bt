@@ -1,0 +1,78 @@
+\documentclass[letterpaper]{article}
+\include{environment}
+\usepackage[colorlinks=true, linkcolor=linkcolor]{hyperref}
+\title{\projname{} - A Realtime Beat Tracker \\ Further Improvements}
+\begin{document}
+
+\maketitle
+
+\section{Status}
+
+    As discussed in the last update, the main task for improving the beat
+    tracker was centered around getting the beat classifier to be more
+    accurate.  I have already made improvements to the metronome to make the
+    interface use a fixed tempo and also to dampen the phase-locking a bit.
+    I'm currently working to get the variance classifier correct.
+
+
+\section{Variance-Sensitive Beat Classifier}
+    
+    If we store about 1 second worth of energies, we can perform the following
+    linear regression to determine a good fit for the ratio of the current
+    instantaneous energy to the last second of average energy in order to
+    detect a beat.  Thus, we're looking for:
+
+    \begin{align}
+        \frac{e}{\mu_E} \geq 1.5142857 - 0.0025714 \sigma^2_E
+    \end{align}
+
+    where $\mu_E$ is the average energy, $e$ is the current instantaneous
+    energy, and $\sigma^2$ is the variance of the last second's worth of
+    energies.  More specifically:
+
+    \begin{align}
+        \mu_E &= \frac{1}{n} \sum_{i=0}^{n-1} e_i \\
+        \sigma^2_E &= \mu_{E^2} - (\mu_E)^2
+    \end{align}
+
+    We can rearrange these equations to be more suitable for implementation in
+    a digital system:
+
+    \begin{align}
+        e \geq & 1.5142857 \mu_E  - 0.0025714 \sigma^2_E \mu_E \\
+          \geq & 1.5142857 \mu_E
+                 - 0.0025714 (\mu_{E^2} - (\mu_E)^2) \mu_E \\
+          \geq & 1.5142857 \mu_E
+                 - 0.0025714 \mu_E \mu_{E^2} 
+                 + 0.0025714 (\mu_E)^3 \\
+          \geq & 1.5142857 \frac{1}{n} \sum_{i=0}^{n-1} e_i \\
+               & - 0.0025714 \left[
+                                \left(\frac{1}{n} \sum_{i=0}^{n-1} (e_i)^2\right) +
+                                \left(
+                                    \left(\frac{1}{n} \sum_{i=0}^{n-1} e_i\right) \cdot
+                                    \left(\frac{1}{n} \sum_{i=0}^{n-1} e_i\right)
+                                \right)
+                             \right] \cdot
+                             \left(\frac{1}{n} \sum_{i=0}^{n-1} e_i\right)
+    \end{align}
+
+
+    So, if we keep a shift register of the last $n$ energies, as well as the
+    last $n$ energies squared, as well as a running sum of those two, then we
+    can simply subtract the oldest value and add the newest value with each new
+    input energy.  This allows us to quickly compute variance with just one
+    extra cycle.  From there, we can use Bluespec's \ttt{FixedPoint} library to
+    compute the value of $e$ in two more cycles (I'm limiting one
+    multiplication per cycle due to resource constraints on the FPGA.  We then
+    can compare $e$ to the current instantaneous energy to see if a beat event
+    occurred or not.
+
+    The current design does this in 4 linearly-pipelined stages.
+
+    I'm still working on getting the algorithm to function correctly.  There's
+    an error in the mathematical implementation.  I was surprised (and happy)
+    to see that I can actually perform all these calculations with full
+    numerical precision, though I have a mechanism in place to truncate results
+    at certain stages to reduce bit-width growth.
+
+\end{document}
