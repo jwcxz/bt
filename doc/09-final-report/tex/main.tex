@@ -361,6 +361,37 @@ Slack (setup path):     0.672ns (requirement - (data path - clock path skew + un
     \end{sidewaysfigure}
 
 
+    A fair amount of code was involved in this project, as shown in
+    Figure~\ref{fig:linecount}.  The design used some existing blocks that I
+    had built for this FPGA, as well as a UART block originally built by
+    Digilent.  The majority of the project goals were met, but the convergence
+    time is still not what it needs to be.  The predicted tempo still has
+    periods where it fluctuates wildly.  Better handling of situations where
+    the beat classifier is not sure what's going on will improve this problem
+    drastically, but I unfortunately did not have enough time to complete that.
+    I hope to spend more time improving this handling.
+
+    \begin{figure}
+        \centering
+\begin{monospace}
+└──> ./sw/count-lines.sh 
+Calculating amount of brainpower spent on bt...
+
+Language   Lines
+---------  -----
+ Bluespec:   836
+     VHDL:  1390
+Testbench:    85
+    LaTeX:  1455
+    Shell:    29
+   Python:  1030
+
+    Total:  4825
+\end{monospace}
+        \caption{summary of code written for \projname}
+        \label{fig:linecount}
+    \end{figure}
+
 \section{Design Exploration --- Thoughts for the Future}
     \subsection{Estimating Best Tempo}
         Right now, the software interface determines the best tempo estimate
@@ -432,5 +463,11 @@ Slack (setup path):     0.672ns (requirement - (data path - clock path skew + un
         A far better beat classifier uses frequency data to determine beat
         likelihood.  This helps offset problems that occur in music where two
         instruments alternate.
+
+    \subsection{Final Thoughts}
+
+        I intend to continue working on this project for as long as I can get
+        access to a Bluespec license, which unfortunately won't be for long
+        given that I'm graduating this year.
 
 \end{document}
