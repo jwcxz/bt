@@ -50,13 +50,21 @@ Integer sample_count_max = valueof(TSub#(TExp#(SampleCountSize), 1));
 typedef Bit#(28) BeatGuess;
 
 /* variance classifier types */
-typedef 26 VISize;
-typedef 16 VFSize;
+typedef 28 VISize;
+typedef 4 VFSize;
 
-typedef UInt#(VISize)           Energy;
-typedef UInt#(TMul#(VISize,2))  SqEnergy;
-typedef UInt#(TMul#(VISize,3))  CuEnergy;
-typedef FixedPoint#(TAdd#(1, TMul#(VISize,3)), VFSize) LinReg;
+typedef Int#(VISize)           Energy;
+typedef FixedPoint#(TAdd#(1, VISize), VFSize) FPEnergy;
+typedef Int#(TDiv#(VISize,2))  HEnergy;
+
+typedef Energy  Variance;
+typedef Int#(TMul#(VISize,2))  VarEnergy;
+
+typedef FixedPoint#(TAdd#(1, TMul#(VISize,2)), VFSize) LinReg;
+
+
+typedef Int#(TMul#(VISize,2))  SqEnergy;
+typedef Int#(TMul#(VISize,3))  CuEnergy;
 
 
 // Metronome
