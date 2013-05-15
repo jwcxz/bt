@@ -1,6 +1,7 @@
 \documentclass[letterpaper]{article}
 \include{environment}
 \usepackage[colorlinks=true, linkcolor=linkcolor]{hyperref}
+\usepackage{rotating}
 \title{\projname{} - A Realtime Beat Tracker \\ Final Report}
 \begin{document}
 
@@ -31,11 +32,15 @@
 
     One algorithm involves trying to classify portions of a music stream as
     ``beats" and then tries to match those beats against one of many possible
-    tempos, eventually narrowing in on a most likely candidate.
+    tempos, eventually narrowing in on a most likely candidate.  This includes
+    creating a series of phase-locking metronomes, each running at a different
+    tempo, and trying to match detected beats to subdivision of each metronome.
+    It's as though we have purchased a hundred or so physical metronomes, put
+    someone in front of each metronome, played a stream of music, and had each
+    person reset their metronome when they heard a beat --- the difference is
+    that we are able to measure just how far each metronomes was off from that
+    beat and keep a running average of that value.
 
-    This includes creating a series of phase-locking metronomes, each running
-    at a different tempo, and trying to match detected beats to subdivision of
-    each metronome.
 
 
 \section{Why Dedicated Hardware?}
@@ -61,7 +66,7 @@
 
     \begin{figure}
         \centering
-        %\includegraphics{fig/architecture.pdf}
+        \includegraphics{fig/architecture.pdf}
         \caption{\projname algorithm architecture}
         \label{fig:architecture}
     \end{figure}
@@ -90,6 +95,42 @@
 
 \section{Testing}
 
+    A Spartan 3A-N evaluation board was chosen as it was easily available.
+    While this FPGA is realitvely weak, it was able to perform most of the
+    intended design without issue.  It has an onboard ADC, so a small
+    DC-biasing circuit with an audio jack was designed and attached to the
+    board, as shown in Figures~\ref{fig:dcbias} and \ref{fig:dcbiasbrd}.  The
+    overall setup is shown in Figure~\ref{fig:setup}.
+
+    \begin{figure}
+        \centering
+        \includegraphics{fig/dcbias.pdf}
+        \caption{DC biasing circuit schematic}
+        \label{fig:dcbias}
+    \end{figure}
+
+    \begin{figure}
+        \centering
+        \includegraphics[scale=0.25]{fig/dcbiasbrd.jpg}
+        \caption{DC biasing circuit board}
+        \label{fig:dcbiasbrd}
+    \end{figure}
+
+    \begin{figure}
+        \centering
+        \includegraphics[scale=0.5]{fig/setup.jpg}
+        \caption{FPGA setup}
+        \label{fig:setup}
+    \end{figure}
+
+    Live audio was fed into the FPGA and the serial stream was read back into
+    the computer.
+
+    The simulation testbench operated in much the same way.  Samples were read
+    from a data file and fed in with the appropriate clock subdivision.  Output
+    samples were then recorded to a new file that could be parsed with a Python
+    script.
+
 
 \section{Microarchitecture}
     \subsection{Top Level}
@@ -97,10 +138,12 @@
         The top level module of \projname{} handles inter-module communication as
         well as sample injection and hardware output.
 
-        \subsection{Interface to Hardware Architecture}
+        \subsubsection{Interface to Hardware Architecture}
 
         The hardware produces audio samples and then requires a handshake to read
-        the sample.  From the hardware side, the \ttt{sample\_injector} module
+        the sample.  The underlying hardware architecture is shown in
+        Figure~\ref{fig:hwarch}.  From the hardware side, the
+        \ttt{sample\_injector} module
         provides the following signals:
 
         \begin{center}
@@ -112,30 +155,29 @@
         \end{tabular}
         \end{center}
 
+        \begin{figure}
+            \centering
+            \includegraphics{fig/hwarch.pdf}
+            \caption{hardware architecture}
+            \label{fig:hwarch}
+        \end{figure}
+
         \projname{} therefore waits for input \ttt{sample\_rdy} to go high, at
         which point it captures \ttt{sample} and asserts \ttt{sample\_rd = '1'} for
         one clock cycle.  It enqueues the sample to the beat classifier's input
-        FIFO through its \ttt{InjectSample} method.
+        FIFO through its put method.
 
-        \subsubsection{Output}
-            
-        The output of the top module is a (wide) parallel bus that is an array of
-        the attempted tempos and their respective likelihoods.  The hardware
-        architecture takes care of splitting this bus up into bytes for output via
-        serial.
-
-        \subsubsection{Submodules}
-
-        There is a single beat classifier, a vector of metronomes, and a single
-        metronome bank controller.  As discussed later, the top level takes care of
-        tasks such as iterating a command, such as \ttt{SetMetronomeTempo} from the
-        metronome bank controller to all of the metronomes.
+        The output of the top module is a FIFO that talks to the underlying
+        hardware.  With each detected beat, the FIFO is filled with the phase
+        offsets of all of the metronomes and flushed via the serial controller.
 
 
     \subsection{Beat Classifier}
 
         The beat classifier handles the process of receiving injected audio samples
-        and determining when the audio stream has likely produced a beat.
+        and determining when the audio stream has likely produced a beat.  It
+        operates as a server.  On the put side, we inject samples.  On the get
+        side, we receive beat events.
 
 
         \subsubsection{Operation}
@@ -149,24 +191,17 @@
         It runs a round of this every time it receives a sample via its
         \ttt{InjectSample} method, described below.  When a new sample has been
         presented, it computes this instantaneous energy of the sample, by squaring
-        it and accumulates this to the \ttt{LocalEnergy} register.  When $N_L$ of
+        it and accumulates this to the \ttt{cur\_energy} register.  When $N_L$ of
         such samples are accumulated, we are ready to compare the local energy with
-        the average energy, which is held in the \ttt{AverageEnergy} register.  If
+        the average energy, which is held in the \ttt{avg\_energy} register.  If
         the local energy is different from the average energy by a factor $F$, we
-        report a beat by setting a \ttt{Maybe} register valid as described in
+        report a beat by setting a register valid as described in
         Section~\ref{sec:bc:metif}.
 
-        We then update the average energy register using a simple EWMA scheme:
-        \begin{equation}
-            \textrm{\ttt{AverageEnergy}} = \alpha \textrm{\ttt{AverageEnergy}} +
-                            (1-\alpha) \textrm{\ttt{LocalEnergy}}
-        \end{equation}
-
-        where $\alpha$ is some number less than 1 and represents the degree of
-        decay.  Another way to handle the \ttt{AverageEnergy} would be to instead
-        keep a buffer of local energies and take an arithmetic average.  This also
-        allows us to compute the variance of the local energies, which would allow
-        us to approximate $F$ far better than if it were constant.
+        We also keep a list of the last $N_E$ energy values so that we can
+        perform an arithmetic mean to calculate the average energy.  With each
+        new energy, we ``kick out" the oldest value out of the average (by
+        subtracting it) and add in the newest value.
 
         
         \subsubsection{Tunable Parameters}
@@ -186,40 +221,27 @@
         would eventually like to be able to compute the variance of local energies
         to determine a best fit for F.
 
-        $\alpha$ determines the decay rate of the average energy.  A low value of
-        $\alpha$ indicates that we want to consider recent energies much, much more
-        than older energies.  However, in this case, $\alpha$ should be fairly
-        high, around 0.6 or 0.7.  If $\alpha$ is too high, however, we could run
-        into issues where the overall energy of the track has changed but the
-        average energy doesn't quite catch up to reflect that.  $\alpha$ will be
-        represented as a \ttt{FixedPoint} fraction.
+        $N_E$ determines how many energy components make up the average energy.
+        We target around 1 second's worth of samples because biologically, the
+        human ear has been found to compare sound energy to a history of about
+        1 second.
 
 
-        \subsubsection{Interface to Top-Level Injector: \ttt{InjectSample}}
+        \subsubsection{Put Interface}
 
-        The module has a very small FIFO through which input samples come in on.
-        The method \ttt{InjectSample} simply enqueues a sample for processing.
+        The module has a very small FIFO through which input samples come in
+        on.  The top-level module issues put calls to the classifier with
+        audio sample data.  This occurs at a frequency of approximately 48~KHz.
             
 
-        \subsubsection{Interface to the Metronomes: \ttt{SawBeat}}
+        \subsubsection{Get Interface}
         \label{sec:bc:metif}
 
         For a given input sample, if the beat classifier has detected a beat,
-        it delivers a message to all of the metronomes.  To do this, it
-        maintains a register of type \ttt{Maybe\#(BeatLikelihood)} that it
-        updates on each clock cycle where a valid value indicates that a beat
-        was discovered.  The \ttt{BeatLikelihood} type is a way for the
-        classifier to indicate to the metronomes just how likely it thought
-        what it just saw was a beat.  This allows the metronomes to adjust
-        their phase accordingly, as is discussed later in this document.
+        it enqueues a \ttt{BeatGuess} to the output FIFO.  The top-level module
+        picks this guess up and delivers a beat event to all of the metronomes.
 
-        To read this register, the beat classifier module provides a method
-        called \ttt{SawBeat} that returns its contents.  The top level module
-        calls this method on every clock cycle and when the value returned is
-        valid, calls the \ttt{InjectBeat} method of each metronome with the
-        likelihood as an argument.
-
-
+        
     \subsection{Metronome}
 
         The metronome keeps time to a given tempo.  Essentially, it's a fancy
@@ -234,19 +256,7 @@
         represents sixteenth notes.  When it rolls over from 3 to 0, a quarter note
         has occurred.
 
-
-        \subsubsection{Setting the Tempo: \ttt{SetTempo}}
-
-        This sets the amount that the counter is incremented by with each clock
-        cycle.  In the language of DDSes, this is the slope of the phase ramp.
-
-
-        \subsubsection{Starting the Metronome: \ttt{Start}}
-
-        This method resets all of the counters to 0 and enables counting.
-
-
-        \subsubsection{Injecting a Beat: \ttt{InjectBeat}}
+        \subsubsection{Injecting a Beat: \ttt{inject\_beat}}
         
         When the beat classifier detects a beat, it indicates this to all of the
         metronomes.  The metronome responds by adjusting its counter's phase to be
@@ -255,93 +265,112 @@
         this back to the top level module (which goes on to deliver this
         information to the metronome bank controller).
 
-        The base implementation will simply just set the phase to the nearest
-        sixteenth note, but the more advanced implementation will do so linearly
-        according to the \ttt{BeatLikelihood} value.  So, for example, if the value
-        was 0.5, the phase will be set to halfway between its current value and the
-        nearest sixteenth note.
 
+\section{Interface}
 
-    \subsection{Metronome Bank Controller}
+    To gather data from the system, a simple software interface was written.
+    Figure~\ref{fig:swss} shows its output for a playing stream.
 
-        The metronome bank controller collects all of the metronome phase
-        differences and uses that to generate the parallel output stream, but also
-        to set the tempos of the individual metronomes.
-
-        For each metronome, it keeps track of an EWMA'd running average for the
-        phase error.  Each time the metronome reports a phase error, the controller
-        computes the new average phase error as $\alpha \textrm{\ttt{AvgPhaseErr}}
-        + (1-\alpha) \textrm{\ttt{PhaseError}}$.  In this case $\alpha=0.5$.
-
-        The parallel output stream is simply generated by shoving all the metronome
-        tempos and their respective average phase errors (with 16 bits of precision)
-        into a parallel bus.
-
-        The other major thing that the controller does is with each update of the
-        average phase error, is to compute their gradient.  If the maximum and
-        minimum differ by a large enough factor, the bank controller will ``zoom
-        in" to a new set of tempos based on where the phase error is minimal.
-        Experimentation showed that it works best to close in on the convergence by
-        a factor of two.  That is, if the previous range spanned 100~BPM, the next
-        range should span 50~BPM, etc.
+    \begin{figure}
+        \centering
+        \includegraphics[scale=0.4]{fig/swss.png}
+        \caption{software interface screenshot showing a 134~BPM song}
+        \label{fig:swss}
+    \end{figure}
 
 
 \section{Evaluation}
-    I've been designing this project very close to hardware -- I do live
-    hardware testing just as much as I do simulation testing.  So I've been
-    conscious of device timing and area constraints the entire time.
+    Throughout the project, this project was built very close to the hardware.
+    Hardware testing was done just as much, if not more than simulation testing
+    throughout the process.  Device timing and area constraints were constantly
+    in mind throughout the entire development process.
 
-    I've been testing with just 3 metronomes. The synthesis results that the
-    logic usage is absolutely tiny:
+    After an initial period of testing with only a few metronomes, the design
+    was built with over 60 with little issue in regards to timing or area
+    constraints.  The metronomes do not perform any complex mathematics at all,
+    so it is very easy to fit a lot of them onto even a very weak FPGA.
+    Figure~\ref{fig:xst} shows the device utilization.
 
+
+    \begin{figure}
+        \centering
 \begin{monospace}
 Device utilization summary:
 ---------------------------
 
 Selected Device : 3s700anfgg484-4 
 
- Number of Slices:           422  out of   5888     7%
- Number of Slice Flip Flops: 440  out of  11776     3%
- Number of 4 input LUTs:     769  out of  11776     6%
-    Number used as logic:    729
-    Number used as RAMs:      40
- Number of IOs:               36
- Number of bonded IOBs:       25  out of    372     6%
- Number of MULT18X18SIOs:      1  out of     20     5%
- Number of GCLKs:              2  out of     24     8%
- Number of DCMs:               1  out of      8    12%
+ Number of Slices:                  2420  out of   5888    41%  
+ Number of Slice Flip Flops:        2234  out of  11776    18%  
+ Number of 4 input LUTs:            4069  out of  11776    34%  
+    Number used as logic:           3893
+    Number used as Shift registers:  112
+    Number used as RAMs:              64
+ Number of IOs:                       36
+ Number of bonded IOBs:               26  out of    372     6%  
+ Number of MULT18X18SIOs:              3  out of     20    15%  
+ Number of GCLKs:                      2  out of     24     8%  
+ Number of DCMs:                       1  out of      8    12%  
 \end{monospace}
+        \caption{device utilization}
+        \label{fig:xst}
+    \end{figure}
 
 Examining the timing analysis report, the critical path is through the beat
 classifier, with the majority of the time is from the energy calculation path.
+Figure~\ref{fig:twr} shows the critical path from the timing analysis.
 
-Let's take a look if we bump the number of metronomes up to 63:
+    \begin{sidewaysfigure}
+        \centering
 \begin{monospace}
-Device utilization summary:
----------------------------
+Paths for end point beat_tracker_inst/bc_bc_outfifo/empty_reg (SLICE_X51Y29.G4), 8012777023 paths
+--------------------------------------------------------------------------------
+Slack (setup path):     0.672ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               beat_tracker_inst/bc_bc_avg_energy_0 (FF)
+  Destination:          beat_tracker_inst/bc_bc_outfifo/empty_reg (FF)
+  Requirement:          40.000ns
+  Data Path Delay:      39.188ns (Levels of Logic = 68)
+  Clock Path Skew:      -0.140ns (0.414 - 0.554)
+  Source Clock:         clk25 rising at 0.000ns
+  Destination Clock:    clk25 rising at 40.000ns
+  Clock Uncertainty:    0.000ns
 
-Selected Device : 3s700anfgg484-4 
+  Maximum Data Path: beat_tracker_inst/bc_bc_avg_energy_0 to beat_tracker_inst/bc_bc_outfifo/empty_reg
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X53Y14.XQ      Tcko                  0.591   beat_tracker_inst/bc_bc_avg_energy<0>
+                                                       beat_tracker_inst/bc_bc_avg_energy_0
+    SLICE_X52Y13.F2      net (fanout=3)        0.483   beat_tracker_inst/bc_bc_avg_energy<0>
+            
+                                     . . .
 
- Number of Slices:           2138  out of   5888    36%
- Number of Slice Flip Flops: 2806  out of  11776    23%
- Number of 4 input LUTs:     3934  out of  11776    33%
- Number of IOs:                36
- Number of bonded IOBs:        25  out of    372     6%
- Number of BRAMs:               1  out of     20     5%
- Number of MULT18X18SIOs:       1  out of     20     5%
- Number of GCLKs:               2  out of     24     8%
- Number of DCMs:                1  out of      8    12%
+                                                       beat_tracker_inst/Mcompar_NOT_SEXT_bc_bc
+                                                        _energy_buf_63_0_11_CONCAT_0_12__ETC___d154_cy<28>
+    SLICE_X51Y29.G4      net (fanout=1)        0.652   beat_tracker_inst/Mcompar_NOT_SEXT_bc_bc
+                                                        _energy_buf_63_0_11_CONCAT_0_12__ETC___d154_cy<28>
+    SLICE_X51Y29.CLK     Tgck                  0.727   beat_tracker_inst/bc_bc_outfifo/empty_reg
+                                                       beat_tracker_inst/bc_bc_outfifo/empty_reg_rstpot
+                                                       beat_tracker_inst/bc_bc_outfifo/empty_reg
+    -------------------------------------------------  ---------------------------
+    Total                                     39.188ns (26.200ns logic, 12.988ns route)
+                                                       (66.9% logic, 33.1% route)
 \end{monospace}
-
-The critical path is once again through the beat classifier to the new beat
-injector.
-
-Right now, attempts at building with 120 metronomes fails to meet timing but I
-bet I could probably get it to synthesize properly with some work.  This would
-eliminate the need for field narrowing.
+        \caption{timing analysis}
+        \label{fig:twr}
+    \end{sidewaysfigure}
 
 
 \section{Design Exploration --- Thoughts for the Future}
+    \subsection{Estimating Best Tempo}
+        Right now, the software interface determines the best tempo estimate
+        from the phase errors of the metronomes.  It might be useful to fold
+        this into the FPGA itself.  Furthermore, one could use additional
+        information that the current design essentially throws out to improve
+        tempo estimation.  By paying attention to how likely we're in a part of
+        the stream that has a strong beat, we can ignore spurious data more
+        easily and get a better estimate of what the true tempo is.
+
     \subsection{Variance-Sensitive Beat Classifier}
         
         If we store about 1 second worth of energies, we can perform the following
@@ -394,13 +423,14 @@ eliminate the need for field narrowing.
         can compare $e$ to the current instantaneous energy to see if a beat event
         occurred or not.
 
-        The current design does this in 4 linearly-pipelined stages.
+        The current design does this in 4 linearly-pipelined stages, though
+        eventually failed to meet the resource constraints of the FPGA.  I'm
+        exploring alternate designs.
 
-        I'm still working on getting the algorithm to function correctly.  There's
-        an error in the mathematical implementation.  I was surprised (and happy)
-        to see that I can actually perform all these calculations with full
-        numerical precision, though I have a mechanism in place to truncate results
-        at certain stages to reduce bit-width growth.
+    \subsection{Frequency-Aware Beat Classifier}
 
+        A far better beat classifier uses frequency data to determine beat
+        likelihood.  This helps offset problems that occur in music where two
+        instruments alternate.
 
 \end{document}
