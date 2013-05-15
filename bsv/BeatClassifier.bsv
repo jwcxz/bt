@@ -17,7 +17,7 @@ typedef Server#(
 
 module mkBeatClassifier(BeatClassifier);
     //BeatClassifier bc <- mkBeatClassifierVariance();
-    BeatClassifier bc <- mkBeatClassifierFixed();
+    BeatClassifier bc <- mkBeatClassifierTest();
     //BeatClassifier bc <- mkBeatClassifierFixedAndBuffered();
 
     interface Put request = bc.request;
@@ -456,7 +456,7 @@ module mkBeatClassifierTest(BeatClassifier);
     Reg#(PulserCount) mpc <- mkReg(0);
     Reg#(Bool) tick <- mkReg(False);
 
-    Reg#(TempoIncrement) increment <- mkReg(calc_tempo_increment(125/4.0));
+    Reg#(TempoIncrement) increment <- mkReg(calc_tempo_increment(125));
     Reg#(MetronomeCounter) counter <- mkReg(0);
 
     rule ignore(True);
